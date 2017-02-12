@@ -108,6 +108,11 @@ try {
 }
 
 ```
+
+## User
+
+- [textlint](https://github.com/textlint/textlint "textlint")
+
 ## Changelog
 
 See [Releases page](https://github.com/azu/rc-config-loader/releases).
