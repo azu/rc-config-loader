@@ -1,6 +1,6 @@
 # rc-config-loader [![Build Status](https://travis-ci.org/azu/rc-config-loader.svg?branch=master)](https://travis-ci.org/azu/rc-config-loader)
 
-load config file from .{product}rc.{json,yml,js}
+Load config from `.{product}rc.{json,yml,js}` file.
 
 ## Features
 
@@ -79,6 +79,7 @@ console.log(rcfile("bar", {
 // throw Error
 try {
     rcfile("unknown", {
+        // This is not json
         configFileName: `${__dirname}/test/fixtures/.unknownrc`,
         defaultExtension: ".json"
     })
