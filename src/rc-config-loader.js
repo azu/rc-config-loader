@@ -28,7 +28,7 @@ const defaultOptions = {
 };
 /**
  * @param {string} pkgName
- * @param {{configFileName?:string, defaultExtension?: string|string[], cwd?:string}} [opts]
+ * @param {rcConfigLoaderOption} [opts]
  * @returns {object}
  */
 module.exports = function rcConfigLoader(pkgName, opts = {}) {
