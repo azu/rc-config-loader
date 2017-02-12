@@ -15,6 +15,8 @@ Find and load a configuration object from:
 ### with [MoOx/rc-loader](https://github.com/MoOx/rc-loader "MoOx/rc-loader")
 
 - Safe API
+    - `rc` contains shabang in `.js` file
+- Enhance Error message
 
 ### with [cosmiconfig](https://github.com/davidtheclark/cosmiconfig "cosmiconfig")
 
