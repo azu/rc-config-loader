@@ -18,7 +18,7 @@ Find and load a configuration object from:
 
 ### with [cosmiconfig](https://github.com/davidtheclark/cosmiconfig "cosmiconfig")
 
-- Sync load
+- Sync loading
 
 ## Install
 
