@@ -15,7 +15,7 @@
   "main": "lib/rc-config-loader.js",
   "scripts": {
     "test": "mocha test/",
-    "build": "cross-env NODE_ENV=production babel src --out-dir lib --source-maps",
+    "build": "cross-env NODE_ENV=production babel src --out-dir lib --copy-files --source-maps",
     "watch": "babel src --out-dir lib --watch --source-maps",
     "prepublish": "npm run --if-present build"
   },
