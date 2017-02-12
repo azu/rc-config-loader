@@ -10,7 +10,7 @@
     "src/"
   ],
   "name": "rc-config-loader",
-  "version": "1.0.1",
+  "version": "1.0.2",
   "description": "load config file from .{product}rc.{json,yml,js}",
   "main": "lib/rc-config-loader.js",
   "scripts": {
