@@ -1,5 +1,9 @@
 {
   "qar": {
     "qar": "qar"
+  },
+  "custom": {
+    "key": "value"
   }
 }
+

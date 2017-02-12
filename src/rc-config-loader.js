@@ -20,6 +20,9 @@ const defaultLoaderByExt = {
 };
 
 const defaultOptions = {
+    // does look for `package.json`
+    packageJSON: false,
+    // treat default(no ext file) as some extension
     defaultExtension: ".json",
     cwd: process.cwd()
 };
@@ -33,6 +36,10 @@ module.exports = function rcConfigLoader(pkgName, opts = {}) {
     const configFileName = opts.configFileName || `.${pkgName}rc`;
     const defaultExtension = opts.defaultExtension || defaultOptions.defaultExtension;
     const cwd = opts.cwd || defaultOptions.cwd;
+    const packageJSON = opts.packageJSON || defaultOptions.packageJSON;
+    const packageJSONFieldName = typeof packageJSON === "object"
+        ? packageJSON.fieldName
+        : pkgName;
 
     const parts = splitPath(cwd);
 
@@ -70,14 +77,16 @@ module.exports = function rcConfigLoader(pkgName, opts = {}) {
                 }
             }
         }
-        const pkgJSONLoc = join(parts, "package.json");
-        if (pathExists.sync(pkgJSONLoc)) {
-            const pkgJSON = require(pkgJSONLoc);
-            if (pkgJSON[pkgName]) {
-                return pkgJSON[pkgName];
+
+        if (packageJSON) {
+            const pkgJSONLoc = join(parts, "package.json");
+            if (pathExists.sync(pkgJSONLoc)) {
+                const pkgJSON = require(pkgJSONLoc);
+                if (pkgJSON[packageJSONFieldName]) {
+                    return pkgJSON[packageJSONFieldName];
+                }
             }
         }
-
         if (parts.pop()) {
             return findConfig();
         }

@@ -32,8 +32,27 @@ describe("rc-config-loader", () => {
     });
 
     it("should read from package.json if no separate config file found", () => {
-        const config = rcConfigLoader("qar", {cwd: path.join(__dirname, "fixtures")});
+        const config = rcConfigLoader("qar", {
+            cwd: path.join(__dirname, "fixtures"),
+            packageJSON: true
+        });
         assert.deepStrictEqual(config, {qar: "qar"});
+    });
+
+    it("should read custom filed from package.json", () => {
+        const config = rcConfigLoader("qar", {
+            cwd: path.join(__dirname, "fixtures"),
+            packageJSON: {
+                fieldName: "custom"
+            }
+        });
+        assert.deepStrictEqual(config, {"key":"value"});
+    });
+
+
+    it("should not read from package.json by default", () => {
+        const config = rcConfigLoader("qar", {cwd: path.join(__dirname, "fixtures")});
+        assert.deepStrictEqual(config, {});
     });
 
     it("should return empty object if no configuration found", () => {

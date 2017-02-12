@@ -1,6 +1,24 @@
-# rc-config-loader
+# rc-config-loader [![Build Status](https://travis-ci.org/azu/rc-config-loader.svg?branch=master)](https://travis-ci.org/azu/rc-config-loader)
 
 load config file from .{product}rc.{json,yml,js}
+
+## Features
+
+Find and load a configuration object from:
+
+- a `package.json` property if it is needed
+- a JSON or YAML, JS "rc file"
+    - `.<product>rc` or `.<product>rc.json`, `.<product>rc.js`, `.<product>rc.yml`, `.<product>rc.yaml`
+
+## Difference
+
+### with [MoOx/rc-loader](https://github.com/MoOx/rc-loader "MoOx/rc-loader")
+
+- Safe API
+
+### with [cosmiconfig](https://github.com/davidtheclark/cosmiconfig "cosmiconfig")
+
+- Sync load
 
 ## Install
 
@@ -10,20 +28,6 @@ Install with [npm](https://www.npmjs.com/):
 
 ## Usage
 
-```js
-const defaultOptions = {
-    defaultExtension: ".json",
-    cwd: process.cwd()
-};
-/**
- * @param {string} pkgName pacakge name
- * @param {{configFileName?:string, defaultExtension?: string|string[], cwd?:string}} [opts]
- * @returns {object}
- */
-function rcConfigLoader(pkgName, opts = {}) {
-    
-}
-````
 
 ### Example
 
@@ -32,6 +36,7 @@ function rcConfigLoader(pkgName, opts = {}) {
 const rcfile = require("rc-config-loader");
 // load .eslintrc from current dir
 console.log(rcfile("eslint"));
+
 // load .eslintrc from specific path
 console.log(rcfile("eslint", {
     configFileName: `${__dirname}/test/fixtures/.eslintrc`
@@ -42,10 +47,22 @@ console.log(rcfile("eslint", {
    { 'comma-dangle': [ 2, 'always-multiline' ],
      'arrow-parens': [ 2, 'as-needed' ] } }
  */
+
+// load property from pacakge.json
+console.log(rcfile("rc-config-loader", {
+    packageJSON: {
+        fieldName: "directories"
+    }
+}));
+/*
+{ test: 'test' }
+ */
+
 // load .eslintrc from specific dir
 console.log(rcfile("eslint", {
     cwd: `${__dirname}/test/fixtures`
 }));
+
 // load specific filename from current dir
 console.log(rcfile("travis", {configFileName: ".travis"}));
 /*
@@ -57,6 +74,7 @@ console.log(rcfile("bar", {
     configFileName: `${__dirname}/test/fixtures/.barrc`,
     defaultExtension: [".json", ".yml", ".js"]
 }));
+
 // try to load as .yml, but it is not json
 // throw Error
 try {
@@ -70,6 +88,7 @@ try {
     SyntaxError: Cannot read config file: /test/fixtures/.unknownrc
     */
 }
+
 ```
 ## Changelog
 
