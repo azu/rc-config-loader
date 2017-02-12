@@ -1,0 +1,60 @@
+{
+  "directories": {
+    "test": "test"
+  },
+  "author": "azu",
+  "license": "MIT",
+  "files": [
+    "bin/",
+    "lib/",
+    "src/"
+  ],
+  "name": "rc-config-loader",
+  "version": "1.0.0",
+  "description": "load config file from .{product}rc.{json,yml,js}",
+  "main": "lib/rc-config-loader.js",
+  "scripts": {
+    "test": "mocha test/",
+    "build": "cross-env NODE_ENV=production babel src --out-dir lib --source-maps",
+    "watch": "babel src --out-dir lib --watch --source-maps",
+    "prepublish": "npm run --if-present build"
+  },
+  "keywords": [
+    "rc",
+    "config",
+    "configuration",
+    "loader",
+    "json",
+    "yaml",
+    "yml"
+  ],
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/azu/rc-config-loader.git"
+  },
+  "bugs": {
+    "url": "https://github.com/azu/rc-config-loader/issues"
+  },
+  "homepage": "https://github.com/azu/rc-config-loader",
+  "dependencies": {
+    "debug": "^2.2.0",
+    "js-yaml": "^3.6.1",
+    "json5": "^0.5.0",
+    "object-assign": "^4.1.0",
+    "object-keys": "^1.0.9",
+    "path-exists": "^2.1.0",
+    "require-uncached": "^1.0.3"
+  },
+  "devDependencies": {
+    "babel-cli": "^6.22.2",
+    "babel-preset-jsdoc-to-assert": "^4.0.0",
+    "babel-preset-latest": "^6.22.0",
+    "babel-preset-power-assert": "^1.0.0",
+    "babel-register": "^6.22.0",
+    "chai": "^3.5.0",
+    "cross-env": "^3.1.4",
+    "eslint": "^3.15.0",
+    "mocha": "^3.2.0",
+    "power-assert": "^1.4.2"
+  }
+}
