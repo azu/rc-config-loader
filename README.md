@@ -2,6 +2,8 @@
 
 Load config from `.{product}rc.{json,yml,js}` file.
 
+It is a Node.js library for loading `.textlintrc`, `.eslintrc`, `.stylelintrc` etc...
+
 ## Features
 
 Find and load a configuration object from:
@@ -109,7 +111,7 @@ try {
 
 ```
 
-## User
+## Users
 
 - [textlint](https://github.com/textlint/textlint "textlint")
 
