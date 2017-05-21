@@ -73,12 +73,13 @@ describe("rc-config-loader", () => {
     });
 
     it("should search multiple file type if set multiple extensions to defaultExtension", () => {
-        const { config } = rcConfigLoader("unknown", {
+        const { config, filePath } = rcConfigLoader("unknown", {
             cwd: path.join(__dirname, "fixtures"),
             defaultExtension: [".json", ".yml", ".js"],
         });
         assert(config !== null && config !== undefined);
         assert(config.unknown === "unknown");
+        assert(filePath === path.join(__dirname, "fixtures/.unknownrc"));
     });
 
     it("should throw error if config file has invalid content", () => {
