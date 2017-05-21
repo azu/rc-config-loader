@@ -48,6 +48,13 @@ export interface rcConfigLoaderOption {
 export default function rcConfigLoader(packageName: string, options?: rcConfigLoaderOption): Object;
 ```
 
+`rcConfigLoader` return `{ config, filePath }` object.
+
+- `config`: it is config object
+- `filePath`: path to config file
+
+If not found config file, return `undefined`.
+
 ### Example
 
 ```js
@@ -61,10 +68,11 @@ console.log(rcfile("eslint", {
     configFileName: `${__dirname}/test/fixtures/.eslintrc`
 }));
 /*
-{ extends: 'standard',
+config: { extends: 'standard',
   rules:
    { 'comma-dangle': [ 2, 'always-multiline' ],
      'arrow-parens': [ 2, 'as-needed' ] } }
+filePath: ${__dirname}/test/fixtures/.eslintrc
  */
 
 // load property from pacakge.json
@@ -74,7 +82,8 @@ console.log(rcfile("rc-config-loader", {
     }
 }));
 /*
-{ test: 'test' }
+config: { test: 'test' }
+filePath: /path/to/package.json
  */
 
 // load .eslintrc from specific dir
@@ -85,7 +94,8 @@ console.log(rcfile("eslint", {
 // load specific filename from current dir
 console.log(rcfile("travis", {configFileName: ".travis"}));
 /*
-{ sudo: false, language: 'node_js', node_js: 'stable' }
+config: { sudo: false, language: 'node_js', node_js: 'stable' }
+filePath: /path/to/.travis
  */
 
 // try to load as .json, .yml, js

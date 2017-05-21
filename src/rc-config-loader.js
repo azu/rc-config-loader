@@ -10,7 +10,7 @@ const fs = require("fs");
 const pathExists = require("path-exists");
 const objectAssign = require("object-assign");
 const keys = require("object-keys");
-const emptyConfig = {};
+const emptyConfig = undefined;
 
 const defaultLoaderByExt = {
     ".js": loadJSConfigFile,
@@ -26,6 +26,7 @@ const defaultOptions = {
     defaultExtension: ".json",
     cwd: process.cwd()
 };
+
 /**
  * @param {string} pkgName
  * @param {rcConfigLoaderOption} [opts]
@@ -60,20 +61,26 @@ module.exports = function rcConfigLoader(pkgName, opts = {}) {
         const exts = keys(loaderByExt);
         while (exts.length) {
             const ext = exts.shift();
-            const configLoc = join(parts, configFileName + ext);
-            if (!pathExists.sync(configLoc)) {
+            const configLocation = join(parts, configFileName + ext);
+            if (!pathExists.sync(configLocation)) {
                 continue;
             }
             const loaders = loaderByExt[ext];
             if (!Array.isArray(loaders)) {
                 const loader = loaders;
-                return loader(configLoc);
+                return {
+                    config: loader(configLocation),
+                    filePath: configLocation
+                };
             }
             for (let i = 0; i < loaders.length; i++) {
                 const loader = loaders[i];
-                const result = loader(configLoc, true);
+                const result = loader(configLocation, true);
                 if (result) {
-                    return result;
+                    return {
+                        config: result,
+                        filePath: configLocation
+                    };
                 }
             }
         }
@@ -83,7 +90,10 @@ module.exports = function rcConfigLoader(pkgName, opts = {}) {
             if (pathExists.sync(pkgJSONLoc)) {
                 const pkgJSON = require(pkgJSONLoc);
                 if (pkgJSON[packageJSONFieldName]) {
-                    return pkgJSON[packageJSONFieldName];
+                    return {
+                        config: pkgJSON[packageJSONFieldName],
+                        filePath: pkgJSONLoc
+                    };
                 }
             }
         }
