@@ -11,6 +11,8 @@ Find and load a configuration object from:
 - a `package.json` property if it is needed
 - a JSON or YAML, JS "rc file"
     - `.<product>rc` or `.<product>rc.json` or `.<product>rc.js` or`.<product>rc.yml`, `.<product>rc.yaml`
+- TypeScript support
+    - Include `.d.ts`
 
 ## Difference
 
