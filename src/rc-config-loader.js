@@ -10,7 +10,6 @@ const fs = require("fs");
 const pathExists = require("path-exists");
 const objectAssign = require("object-assign");
 const keys = require("object-keys");
-const emptyConfig = undefined;
 
 const defaultLoaderByExt = {
     ".js": loadJSConfigFile,
@@ -23,7 +22,12 @@ const defaultOptions = {
     // does look for `package.json`
     packageJSON: false,
     // treat default(no ext file) as some extension
-    defaultExtension: ".json",
+    defaultExtension: [
+        ".json",
+        ".js",
+        ".yaml",
+        ".yml"
+    ],
     cwd: process.cwd()
 };
 
@@ -54,6 +58,7 @@ module.exports = function rcConfigLoader(pkgName, opts = {}) {
 
     return findConfig({ parts, loaderByExt, configFileName, packageJSON, packageJSONFieldName });
 };
+
 /**
  *
  * @param {string[]} parts
@@ -61,7 +66,10 @@ module.exports = function rcConfigLoader(pkgName, opts = {}) {
  * @param {string} configFileName
  * @param {boolean|Object} packageJSON
  * @param {string} packageJSONFieldName
- * @returns {Object}
+ * @returns {{
+ *  config: string,
+ *  filePath: string
+ * }|undefined}
  */
 function findConfig({ parts, loaderByExt, configFileName, packageJSON, packageJSONFieldName }) {
     const exts = keys(loaderByExt);
@@ -74,6 +82,10 @@ function findConfig({ parts, loaderByExt, configFileName, packageJSON, packageJS
         const loaders = loaderByExt[ext];
         if (!Array.isArray(loaders)) {
             const loader = loaders;
+            const result = loader(configLocation);
+            if (!result) {
+                continue;
+            }
             return {
                 config: loader(configLocation),
                 filePath: configLocation
@@ -82,12 +94,13 @@ function findConfig({ parts, loaderByExt, configFileName, packageJSON, packageJS
         for (let i = 0; i < loaders.length; i++) {
             const loader = loaders[i];
             const result = loader(configLocation, true);
-            if (result) {
-                return {
-                    config: result,
-                    filePath: configLocation
-                };
+            if (!result) {
+                continue;
             }
+            return {
+                config: result,
+                filePath: configLocation
+            };
         }
     }
 
@@ -106,7 +119,7 @@ function findConfig({ parts, loaderByExt, configFileName, packageJSON, packageJS
     if (parts.pop()) {
         return findConfig({ parts, loaderByExt, configFileName, packageJSON, packageJSONFieldName });
     }
-    return emptyConfig;
+    return undefined;
 }
 
 function splitPath(x) {

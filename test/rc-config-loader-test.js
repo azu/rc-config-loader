@@ -30,6 +30,19 @@ describe("rc-config-loader", () => {
         assert.deepStrictEqual(config, { bar: "bar" });
     });
 
+    it("should read js config by { configFileName }", () => {
+        const { config } = rcConfigLoader("textlint", {
+            configFileName: path.join(__dirname, "fixtures", ".textlintrc")
+        });
+        assert.deepStrictEqual(config, {
+            "rules": {
+                "a": true,
+                "b": true,
+                "c": true
+            }
+        });
+    });
+
     it("should read yaml config in current directory", () => {
         const { config } = rcConfigLoader("yamlconfig", { cwd: path.join(__dirname, "fixtures") });
         assert.deepStrictEqual(config, { foo: "bar" });
@@ -55,12 +68,12 @@ describe("rc-config-loader", () => {
 
 
     it("should not read from package.json by default", () => {
-        const result  = rcConfigLoader("qar", { cwd: path.join(__dirname, "fixtures") });
+        const result = rcConfigLoader("qar", { cwd: path.join(__dirname, "fixtures") });
         assert.deepStrictEqual(result, undefined);
     });
 
     it("should return empty object if no configuration found", () => {
-        const result  = rcConfigLoader("qarbar", { cwd: path.join(__dirname, "fixtures") });
+        const result = rcConfigLoader("qarbar", { cwd: path.join(__dirname, "fixtures") });
         assert.deepStrictEqual(result, undefined);
     });
 

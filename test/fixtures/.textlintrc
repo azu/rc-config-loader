@@ -1,0 +1,7 @@
+module.exports = {
+  "rules": {
+    "a": true,
+    "b": true,
+    "c": true
+  }
+}
