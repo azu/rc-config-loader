@@ -53,7 +53,7 @@ export default function rcConfigLoader(packageName: string, options?: rcConfigLo
 `rcConfigLoader` return `{ config, filePath }` object.
 
 - `config`: it is config object
-- `filePath`: path to config file
+- `filePath`: absolute path to config file
 
 If not found config file, return `undefined`.
 

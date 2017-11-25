@@ -30,7 +30,7 @@ const defaultOptions = {
 /**
  * @param {string} pkgName
  * @param {rcConfigLoaderOption} [opts]
- * @returns {object}
+ * @returns {{ config: Object, filePath:string } | undefined}
  */
 module.exports = function rcConfigLoader(pkgName, opts = {}) {
     // path/to/config or basename of config file.
@@ -52,57 +52,62 @@ module.exports = function rcConfigLoader(pkgName, opts = {}) {
         "": loaders,
     });
 
-    return findConfig(parts);
-
-    /**
-     * @returns {object} always return object
-     */
-    function findConfig() {
-        const exts = keys(loaderByExt);
-        while (exts.length) {
-            const ext = exts.shift();
-            const configLocation = join(parts, configFileName + ext);
-            if (!pathExists.sync(configLocation)) {
-                continue;
-            }
-            const loaders = loaderByExt[ext];
-            if (!Array.isArray(loaders)) {
-                const loader = loaders;
+    return findConfig({ parts, loaderByExt, configFileName, packageJSON, packageJSONFieldName });
+};
+/**
+ *
+ * @param {string[]} parts
+ * @param {Object} loaderByExt
+ * @param {string} configFileName
+ * @param {boolean|Object} packageJSON
+ * @param {string} packageJSONFieldName
+ * @returns {Object}
+ */
+function findConfig({ parts, loaderByExt, configFileName, packageJSON, packageJSONFieldName }) {
+    const exts = keys(loaderByExt);
+    while (exts.length) {
+        const ext = exts.shift();
+        const configLocation = join(parts, configFileName + ext);
+        if (!pathExists.sync(configLocation)) {
+            continue;
+        }
+        const loaders = loaderByExt[ext];
+        if (!Array.isArray(loaders)) {
+            const loader = loaders;
+            return {
+                config: loader(configLocation),
+                filePath: configLocation
+            };
+        }
+        for (let i = 0; i < loaders.length; i++) {
+            const loader = loaders[i];
+            const result = loader(configLocation, true);
+            if (result) {
                 return {
-                    config: loader(configLocation),
+                    config: result,
                     filePath: configLocation
                 };
             }
-            for (let i = 0; i < loaders.length; i++) {
-                const loader = loaders[i];
-                const result = loader(configLocation, true);
-                if (result) {
-                    return {
-                        config: result,
-                        filePath: configLocation
-                    };
-                }
-            }
         }
-
-        if (packageJSON) {
-            const pkgJSONLoc = join(parts, "package.json");
-            if (pathExists.sync(pkgJSONLoc)) {
-                const pkgJSON = require(pkgJSONLoc);
-                if (pkgJSON[packageJSONFieldName]) {
-                    return {
-                        config: pkgJSON[packageJSONFieldName],
-                        filePath: pkgJSONLoc
-                    };
-                }
-            }
-        }
-        if (parts.pop()) {
-            return findConfig();
-        }
-        return emptyConfig;
     }
-};
+
+    if (packageJSON) {
+        const pkgJSONLoc = join(parts, "package.json");
+        if (pathExists.sync(pkgJSONLoc)) {
+            const pkgJSON = require(pkgJSONLoc);
+            if (pkgJSON[packageJSONFieldName]) {
+                return {
+                    config: pkgJSON[packageJSONFieldName],
+                    filePath: pkgJSONLoc
+                };
+            }
+        }
+    }
+    if (parts.pop()) {
+        return findConfig({ parts, loaderByExt, configFileName, packageJSON, packageJSONFieldName });
+    }
+    return emptyConfig;
+}
 
 function splitPath(x) {
     return path.resolve(x || "").split(path.sep);
