@@ -22,7 +22,7 @@ const defaultOptions = {
     // does look for `package.json`
     packageJSON: false,
     // treat default(no ext file) as some extension
-    defaultExtension: [".json", ".js", ".yaml", ".yml"],
+    defaultExtension: [".json", ".yaml", ".yml", ".js"],
     cwd: process.cwd()
 };
 
