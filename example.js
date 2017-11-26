@@ -6,9 +6,11 @@ const rcfile = require("./src/rc-config-loader");
 console.log(rcfile("eslint"));
 
 // load .eslintrc from specific path
-console.log(rcfile("eslint", {
-    configFileName: `${__dirname}/test/fixtures/.eslintrc`
-}));
+console.log(
+    rcfile("eslint", {
+        configFileName: `${__dirname}/test/fixtures/.eslintrc`
+    })
+);
 /*
 { extends: 'standard',
   rules:
@@ -17,31 +19,37 @@ console.log(rcfile("eslint", {
  */
 
 // load property from pacakge.json
-console.log(rcfile("rc-config-loader", {
-    packageJSON: {
-        fieldName: "directories"
-    }
-}));
+console.log(
+    rcfile("rc-config-loader", {
+        packageJSON: {
+            fieldName: "directories"
+        }
+    })
+);
 /*
 { test: 'test' }
  */
 
 // load .eslintrc from specific dir
-console.log(rcfile("eslint", {
-    cwd: `${__dirname}/test/fixtures`
-}));
+console.log(
+    rcfile("eslint", {
+        cwd: `${__dirname}/test/fixtures`
+    })
+);
 
 // load specific filename from current dir
-console.log(rcfile("travis", {configFileName: ".travis"}));
+console.log(rcfile("travis", { configFileName: ".travis" }));
 /*
 { sudo: false, language: 'node_js', node_js: 'stable' }
  */
 
 // try to load as .json, .yml, js
-console.log(rcfile("bar", {
-    configFileName: `${__dirname}/test/fixtures/.barrc`,
-    defaultExtension: [".json", ".yml", ".js"]
-}));
+console.log(
+    rcfile("bar", {
+        configFileName: `${__dirname}/test/fixtures/.barrc`,
+        defaultExtension: [".json", ".yml", ".js"]
+    })
+);
 
 // try to load as .yml, but it is not json
 // throw Error
@@ -49,7 +57,7 @@ try {
     rcfile("unknown", {
         configFileName: `${__dirname}/test/fixtures/.unknownrc`,
         defaultExtension: ".json"
-    })
+    });
 } catch (error) {
     console.log(error);
     /*

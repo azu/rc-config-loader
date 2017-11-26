@@ -4,7 +4,7 @@
 "use strict";
 const path = require("path");
 const debug = require("debug")("rc-config-loader");
-const requireUncached = require("require-uncached");
+const requireFromString = require("require-from-string");
 const JSON5 = require("json5");
 const fs = require("fs");
 const pathExists = require("path-exists");
@@ -15,19 +15,14 @@ const defaultLoaderByExt = {
     ".js": loadJSConfigFile,
     ".json": loadJSONConfigFile,
     ".yaml": loadYAMLConfigFile,
-    ".yml": loadYAMLConfigFile,
+    ".yml": loadYAMLConfigFile
 };
 
 const defaultOptions = {
     // does look for `package.json`
     packageJSON: false,
     // treat default(no ext file) as some extension
-    defaultExtension: [
-        ".json",
-        ".js",
-        ".yaml",
-        ".yml"
-    ],
+    defaultExtension: [".json", ".js", ".yaml", ".yml"],
     cwd: process.cwd()
 };
 
@@ -42,18 +37,16 @@ module.exports = function rcConfigLoader(pkgName, opts = {}) {
     const defaultExtension = opts.defaultExtension || defaultOptions.defaultExtension;
     const cwd = opts.cwd || defaultOptions.cwd;
     const packageJSON = opts.packageJSON || defaultOptions.packageJSON;
-    const packageJSONFieldName = typeof packageJSON === "object"
-        ? packageJSON.fieldName
-        : pkgName;
+    const packageJSONFieldName = typeof packageJSON === "object" ? packageJSON.fieldName : pkgName;
 
     const parts = splitPath(cwd);
 
     const loaders = Array.isArray(defaultExtension)
-        ? defaultExtension.map((extension) => defaultLoaderByExt[extension])
+        ? defaultExtension.map(extension => defaultLoaderByExt[extension])
         : defaultLoaderByExt[defaultExtension];
 
     const loaderByExt = objectAssign({}, defaultLoaderByExt, {
-        "": loaders,
+        "": loaders
     });
 
     return findConfig({ parts, loaderByExt, configFileName, packageJSON, packageJSONFieldName });
@@ -131,9 +124,10 @@ function join(parts, filename) {
 }
 
 function loadJSConfigFile(filePath, suppress) {
-    debug(`Loading JS config file: ${filePath}`);
+    debug(`Loading JavaScript config file: ${filePath}`);
     try {
-        return requireUncached(filePath);
+        const content = fs.readFileSync(filePath, "utf-8");
+        return requireFromString(content, filePath);
     } catch (e) {
         debug(`Error reading JavaScript file: ${filePath}`);
         if (!suppress) {

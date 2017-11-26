@@ -35,10 +35,10 @@ describe("rc-config-loader", () => {
             configFileName: path.join(__dirname, "fixtures", ".textlintrc")
         });
         assert.deepStrictEqual(config, {
-            "rules": {
-                "a": true,
-                "b": true,
-                "c": true
+            rules: {
+                a: true,
+                b: true,
+                c: true
             }
         });
     });
@@ -63,9 +63,8 @@ describe("rc-config-loader", () => {
                 fieldName: "custom"
             }
         });
-        assert.deepStrictEqual(config, { "key": "value" });
+        assert.deepStrictEqual(config, { key: "value" });
     });
-
 
     it("should not read from package.json by default", () => {
         const result = rcConfigLoader("qar", { cwd: path.join(__dirname, "fixtures") });
@@ -88,7 +87,7 @@ describe("rc-config-loader", () => {
     it("should search multiple file type if set multiple extensions to defaultExtension", () => {
         const { config, filePath } = rcConfigLoader("unknown", {
             cwd: path.join(__dirname, "fixtures"),
-            defaultExtension: [".json", ".yml", ".js"],
+            defaultExtension: [".json", ".yml", ".js"]
         });
         assert(config !== null && config !== undefined);
         assert(config.unknown === "unknown");
@@ -99,7 +98,7 @@ describe("rc-config-loader", () => {
         assert.throws(() => {
             rcConfigLoader("invalid-config", {
                 defaultExtension: ".js",
-                cwd: path.join(__dirname, "fixtures"),
+                cwd: path.join(__dirname, "fixtures")
             });
         }, Error);
     });
