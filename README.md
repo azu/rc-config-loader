@@ -24,7 +24,7 @@ Find and load a configuration object from:
 
 ### with [cosmiconfig](https://github.com/davidtheclark/cosmiconfig "cosmiconfig")
 
-- <del>Sync loading</del
+- <del>Sync loading</del>
     - [cosmiconfig@3+](https://github.com/davidtheclark/cosmiconfig/blob/master/CHANGELOG.md#300) support `sync` option
 
 ## Install
