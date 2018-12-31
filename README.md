@@ -12,7 +12,7 @@ Find and load a configuration object from:
 - a JSON or YAML, JS "rc file"
     - `.<product>rc` or `.<product>rc.json` or `.<product>rc.js` or`.<product>rc.yml`, `.<product>rc.yaml`
 - TypeScript support
-    - Include `.d.ts`
+    - Includes `.d.ts`
 
 ## Difference
 
@@ -24,7 +24,8 @@ Find and load a configuration object from:
 
 ### with [cosmiconfig](https://github.com/davidtheclark/cosmiconfig "cosmiconfig")
 
-- Sync loading
+- <del>Sync loading</del
+    - [cosmiconfig@3+](https://github.com/davidtheclark/cosmiconfig/blob/master/CHANGELOG.md#300) support `sync` option
 
 ## Install
 
