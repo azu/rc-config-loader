@@ -80,7 +80,7 @@ function findConfig({ parts, loaderByExt, configFileName, packageJSON, packageJS
                 continue;
             }
             return {
-                config: loader(configLocation),
+                config: result,
                 filePath: configLocation
             };
         }
