@@ -18,9 +18,7 @@
     "build": "cross-env NODE_ENV=production babel src --out-dir lib --copy-files --source-maps",
     "watch": "babel src --out-dir lib --watch --source-maps",
     "prepublish": "npm run --if-present build",
-    "prettier": "prettier --write '**/*.{js,jsx,ts,tsx,css}'",
-    "precommit": "lint-staged",
-    "postcommit": "git reset"
+    "prettier": "prettier --write '**/*.{js,jsx,ts,tsx,css}'"
   },
   "keywords": [
     "rc",
@@ -73,5 +71,11 @@
       "prettier --write",
       "git add"
     ]
+  },
+  "husky": {
+    "hooks": {
+      "post-commit": "git reset",
+      "pre-commit": "lint-staged"
+    }
   }
 }
