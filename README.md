@@ -107,7 +107,7 @@ console.log(rcfile("bar", {
     defaultExtension: [".json", ".yml", ".js"]
 }));
 
-// try to load as .yml, but it is not json
+// try to load as .json, but it is not json
 // throw Error
 try {
     rcfile("unknown", {
