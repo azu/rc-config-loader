@@ -38,7 +38,7 @@ export interface rcConfigLoaderOption {
     cwd?: string;
 }
 
-type Loader = (fileName: string, suppress: boolean) => string;
+type Loader = <R extends object>(fileName: string, suppress: boolean) => R;
 
 const selectLoader = (defaultLoaderByExt: { [index: string]: Loader }, extension: string) => {
     if (![".json", ".yaml", ".yml", ".js"].includes(extension)) {
@@ -46,12 +46,21 @@ const selectLoader = (defaultLoaderByExt: { [index: string]: Loader }, extension
     }
     return defaultLoaderByExt[extension];
 };
+
 /**
+ * Find and load rcfile, return { config, filePath }
+ * If not found any rcfile, throw an Error.
  * @param {string} pkgName
  * @param {rcConfigLoaderOption} [opts]
  * @returns {{ config: Object, filePath:string } | undefined}
  */
-module.exports = function rcConfigLoader(pkgName: string, opts: rcConfigLoaderOption = {}) {
+export function rcFile<R extends {}>(
+    pkgName: string,
+    opts: rcConfigLoaderOption = {}
+): {
+    config: R;
+    filePath: string;
+} {
     // path/to/config or basename of config file.
     const configFileName = opts.configFileName || `.${pkgName}rc`;
     const defaultExtension = opts.defaultExtension || defaultOptions.defaultExtension;
@@ -67,7 +76,7 @@ module.exports = function rcConfigLoader(pkgName: string, opts: rcConfigLoaderOp
     const loaderByExt = Object.assign({}, defaultLoaderByExt, {
         "": loadersByOrder
     });
-    return findConfig({
+    return findConfig<R>({
         parts,
         loaderByExt,
         loadersByOrder,
@@ -75,15 +84,16 @@ module.exports = function rcConfigLoader(pkgName: string, opts: rcConfigLoaderOp
         packageJSON,
         packageJSONFieldName
     });
-};
+}
 
 /**
+ *
  * @returns {{
  *  config: string,
  *  filePath: string
- * }|undefined}
+ * }}
  */
-function findConfig({
+function findConfig<R extends {}>({
     parts,
     loaderByExt,
     loadersByOrder,
@@ -99,12 +109,10 @@ function findConfig({
     configFileName: string;
     packageJSON: boolean | { fieldName: string };
     packageJSONFieldName: string;
-}):
-    | {
-          config: string;
-          filePath: string;
-      }
-    | undefined {
+}): {
+    config: R;
+    filePath: string;
+} {
     const extensions = Object.keys(loaderByExt);
     while (extensions.length) {
         const ext = extensions.shift();
@@ -117,7 +125,7 @@ function findConfig({
         const loaders = ext ? loaderByExt[ext] : loadersByOrder;
         if (!Array.isArray(loaders)) {
             const loader = loaders;
-            const result = loader(configLocation, false);
+            const result = loader<R>(configLocation, false);
             if (!result) {
                 continue;
             }
@@ -128,7 +136,7 @@ function findConfig({
         }
         for (let i = 0; i < loaders.length; i++) {
             const loader = loaders[i];
-            const result = loader(configLocation, true);
+            const result = loader<R>(configLocation, true);
             if (!result) {
                 continue;
             }
@@ -154,7 +162,7 @@ function findConfig({
     if (parts.pop()) {
         return findConfig({ parts, loaderByExt, loadersByOrder, configFileName, packageJSON, packageJSONFieldName });
     }
-    return undefined;
+    throw new Error(`Not found config file: ${configFileName}`);
 }
 
 function splitPath(x: string): string[] {

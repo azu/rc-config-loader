@@ -1,37 +1,35 @@
 "use strict";
 import assert from "assert";
-
 import path from "path";
-
-const rcConfigLoader = require("../src/rc-config-loader");
+import { rcFile } from "../src/rc-config-loader";
 
 describe("rc-config-loader", () => {
     it("should read json config in current directory", () => {
         const cwd = path.join(__dirname, "fixtures");
-        const { config, filePath } = rcConfigLoader("foo", { cwd });
+        const { config, filePath } = rcFile("foo", { cwd });
         assert.deepStrictEqual(config, { foo: 1 });
         assert.strictEqual(filePath, path.join(cwd, ".foorc.json"));
     });
 
     it("should read json config in parent directory", () => {
         const cwd = path.join(__dirname, "fixtures/some-dir");
-        const { config, filePath } = rcConfigLoader("foo", { cwd });
+        const { config, filePath } = rcFile("foo", { cwd });
         assert.deepStrictEqual(config, { foo: 1 });
         assert.strictEqual(filePath, path.join(__dirname, "fixtures", ".foorc.json"));
     });
 
     it("should read json config two directories up", () => {
-        const { config } = rcConfigLoader("foo", { cwd: path.join(__dirname, "fixtures/some-dir/some-other-dir") });
+        const { config } = rcFile("foo", { cwd: path.join(__dirname, "fixtures/some-dir/some-other-dir") });
         assert.deepStrictEqual(config, { foo: 1 });
     });
 
     it("should read js config in current directory", () => {
-        const { config } = rcConfigLoader("bar", { cwd: path.join(__dirname, "fixtures") });
+        const { config } = rcFile("bar", { cwd: path.join(__dirname, "fixtures") });
         assert.deepStrictEqual(config, { bar: "bar" });
     });
 
     it("should read js config by { configFileName }", () => {
-        const { config } = rcConfigLoader("textlint", {
+        const { config } = rcFile("textlint", {
             configFileName: path.join(__dirname, "fixtures", ".textlintrc")
         });
         assert.deepStrictEqual(config, {
@@ -44,20 +42,21 @@ describe("rc-config-loader", () => {
     });
 
     it("should read yaml config in current directory", () => {
-        const { config } = rcConfigLoader("yamlconfig", { cwd: path.join(__dirname, "fixtures") });
+        const { config } = rcFile("yamlconfig", { cwd: path.join(__dirname, "fixtures") });
         assert.deepStrictEqual(config, { foo: "bar" });
     });
 
     it("should read from package.json if no separate config file found", () => {
-        const { config } = rcConfigLoader("qar", {
+        const { config, filePath } = rcFile("qar", {
             cwd: path.join(__dirname, "fixtures"),
             packageJSON: true
         });
         assert.deepStrictEqual(config, { qar: "qar" });
+        assert.strictEqual(filePath, path.join(__dirname, "fixtures/package.json"));
     });
 
     it("should read custom filed from package.json", () => {
-        const { config } = rcConfigLoader("qar", {
+        const { config } = rcFile("qar", {
             cwd: path.join(__dirname, "fixtures"),
             packageJSON: {
                 fieldName: "custom"
@@ -67,25 +66,21 @@ describe("rc-config-loader", () => {
     });
 
     it("should not read from package.json by default", () => {
-        const result = rcConfigLoader("qar", { cwd: path.join(__dirname, "fixtures") });
-        assert.deepStrictEqual(result, undefined);
-    });
-
-    it("should return empty object if no configuration found", () => {
-        const result = rcConfigLoader("qarbar", { cwd: path.join(__dirname, "fixtures") });
-        assert.deepStrictEqual(result, undefined);
+        assert.throws(() => {
+            rcFile("qar", { cwd: path.join(__dirname, "fixtures") });
+        }, Error);
     });
 
     it("should search in current directory by default", () => {
         const cwd = path.join(__dirname, "fixtures");
-        const { config, filePath } = rcConfigLoader("eslint", { cwd });
+        const { config, filePath } = rcFile("eslint", { cwd });
         assert(config !== null && config !== undefined);
         assert(config.extends === "standard");
         assert(filePath === path.join(cwd, ".eslintrc"));
     });
 
     it("should search multiple file type if set multiple extensions to defaultExtension", () => {
-        const { config, filePath } = rcConfigLoader("unknown", {
+        const { config, filePath } = rcFile("unknown", {
             cwd: path.join(__dirname, "fixtures"),
             defaultExtension: [".json", ".yml", ".js"]
         });
@@ -96,7 +91,7 @@ describe("rc-config-loader", () => {
 
     it("should throw error if config file has invalid content", () => {
         assert.throws(() => {
-            rcConfigLoader("invalid-config", {
+            rcFile("invalid-config", {
                 defaultExtension: ".js",
                 cwd: path.join(__dirname, "fixtures")
             });

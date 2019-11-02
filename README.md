@@ -39,32 +39,59 @@ Install with [npm](https://www.npmjs.com/):
 
 ```ts
 export interface rcConfigLoaderOption {
-    // does look for `package.json`
     packageJSON?: boolean | {
         fieldName: string;
     };
-    // if config file name is not same with packageName, set the name
     configFileName?: string;
-    // treat default(no ext file) as some extension
     defaultExtension?: string | string[];
-    // where start to load
     cwd?: string;
 }
-export default function rcConfigLoader(packageName: string, options?: rcConfigLoaderOption): Object;
+/**
+ * Find and load rcfile, return { config, filePath }
+ * If not found any rcfile, throw an Error.
+ * @param {string} pkgName
+ * @param {rcConfigLoaderOption} [opts]
+ * @returns {{ config: Object, filePath:string } | undefined}
+ */
+export declare function rcFile<R extends {}>(pkgName: string, opts?: rcConfigLoaderOption): {
+    config: R;
+    filePath: string;
+};
 ```
 
-`rcConfigLoader` return `{ config, filePath }` object.
+`rcFile` return `{ config, filePath }` object.
 
 - `config`: it is config object
 - `filePath`: absolute path to config file
 
-If not found config file, return `undefined`.
+**Note:** `rcFile` function throw an Error in such situation: 
+
+- If not found config file, throw an Error.
+- If the rcfile content is not parsable, throw an Error.
+
+Recommenced usage:
+
+```js
+import { rcfile } from "rc-config-loader"
+
+function loadRcfile(rcFileName){
+    try {
+        const { config } = rcFile(rcFileName);
+        return config;
+    } catch (error) {
+        return {} ; // default value
+    }
+}
+// load config
+const config = loadRcfile("your-application");
+console.log(config); // => rcfile content
+```
 
 ### Example
 
 ```js
 "use strict";
-const rcfile = require("rc-config-loader");
+import { rcfile } from "rc-config-loader"
 // load .eslintrc from current dir
 console.log(rcfile("eslint"));
 
@@ -109,8 +136,16 @@ console.log(rcfile("bar", {
     defaultExtension: [".json", ".yml", ".js"]
 }));
 
-// try to load as .json, but it is not json
+// try to load as foobar, but it is not found
 // throw Error
+try {
+    rcfile("foorbar");
+} catch (error) {
+    console.log(error); // Not found config file: .foobarrc
+}
+
+// try to load as .json, but it is not json
+// throw SyntaxError
 try {
     rcfile("unknown", {
         // This is not json
