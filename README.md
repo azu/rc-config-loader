@@ -145,13 +145,8 @@ console.log(rcFile("bar", {
     defaultExtension: [".json", ".yml", ".js"]
 }));
 
-// try to load as foobar, but it is not found
-// throw Error
-try {
-    rcFile("foorbar");
-} catch (error) {
-    console.log(error); // Not found config file: .foobarrc
-}
+// try to load as foobar, but .foobarrc is not found
+console.log(rcFile("foorbar")); // => undefined
 
 // try to load as .json, but it is not json
 // throw SyntaxError
