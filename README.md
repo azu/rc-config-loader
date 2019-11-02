@@ -72,7 +72,7 @@ export declare function rcFile<R extends {}>(pkgName: string, opts?: rcConfigLoa
 Recommenced usage:
 
 ```js
-import { rcfile } from "rc-config-loader"
+import { rcFile } from "rc-config-loader"
 
 function loadRcFile(rcFileName){
     try {
@@ -91,12 +91,12 @@ console.log(config); // => rcfile content
 
 ```js
 "use strict";
-import { rcfile } from "rc-config-loader"
+import { rcFile } from "rc-config-loader"
 // load .eslintrc from current dir
-console.log(rcfile("eslint"));
+console.log(rcFile("eslint"));
 
 // load .eslintrc from specific path
-console.log(rcfile("eslint", {
+console.log(rcFile("eslint", {
     configFileName: `${__dirname}/test/fixtures/.eslintrc`
 }));
 /*
@@ -108,7 +108,7 @@ filePath: ${__dirname}/test/fixtures/.eslintrc
  */
 
 // load property from pacakge.json
-console.log(rcfile("rc-config-loader", {
+console.log(rcFile("rc-config-loader", {
     packageJSON: {
         fieldName: "directories"
     }
@@ -119,19 +119,19 @@ filePath: /path/to/package.json
  */
 
 // load .eslintrc from specific dir
-console.log(rcfile("eslint", {
+console.log(rcFile("eslint", {
     cwd: `${__dirname}/test/fixtures`
 }));
 
 // load specific filename from current dir
-console.log(rcfile("travis", {configFileName: ".travis"}));
+console.log(rcFile("travis", {configFileName: ".travis"}));
 /*
 config: { sudo: false, language: 'node_js', node_js: 'stable' }
 filePath: /path/to/.travis
  */
 
 // try to load as .json, .yml, js
-console.log(rcfile("bar", {
+console.log(rcFile("bar", {
     configFileName: `${__dirname}/test/fixtures/.barrc`,
     defaultExtension: [".json", ".yml", ".js"]
 }));
@@ -139,7 +139,7 @@ console.log(rcfile("bar", {
 // try to load as foobar, but it is not found
 // throw Error
 try {
-    rcfile("foorbar");
+    rcFile("foorbar");
 } catch (error) {
     console.log(error); // Not found config file: .foobarrc
 }
@@ -147,7 +147,7 @@ try {
 // try to load as .json, but it is not json
 // throw SyntaxError
 try {
-    rcfile("unknown", {
+    rcFile("unknown", {
         // This is not json
         configFileName: `${__dirname}/test/fixtures/.unknownrc`,
         defaultExtension: ".json"
@@ -158,7 +158,6 @@ try {
     SyntaxError: Cannot read config file: /test/fixtures/.unknownrc
     */
 }
-
 ```
 
 ## Users
