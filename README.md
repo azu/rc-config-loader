@@ -26,6 +26,9 @@ Find and load a configuration object from:
 
 - <del>Sync loading</del>
     - [cosmiconfig@3+](https://github.com/davidtheclark/cosmiconfig/blob/master/CHANGELOG.md#300) support `sync` option
+- Built-in TypeScript support
+
+:memo: [cosmiconfig](https://github.com/davidtheclark/cosmiconfig) has rich features.
 
 ## Install
 
