@@ -97,4 +97,17 @@ describe("rc-config-loader", () => {
             });
         }, Error);
     });
+    it("should throw error if config file has invalid content", () => {
+        assert.throws(() => {
+            rcFile("invalid-config", {
+                defaultExtension: ".js",
+                cwd: path.join(__dirname, "fixtures")
+            });
+        }, Error);
+    });
+    it("should throw error if config file has invalid json", () => {
+        assert.throws(() => {
+            rcFile("invalidjson", { cwd: path.join(__dirname, "fixtures") });
+        }, Error);
+    });
 });
