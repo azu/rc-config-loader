@@ -71,7 +71,7 @@ export declare function rcFile<R extends {}>(pkgName: string, opts?: rcConfigLoa
 **Note:**
  
 - `rcFile` function return `undefined` if the config file is not found
-- `rcFile` throw an Error if the config file config content is malformed (causing a parsing error)
+- `rcFile` throw an Error if the config file content is malformed (causing a parsing error)
 
 Recommenced usage:
 
