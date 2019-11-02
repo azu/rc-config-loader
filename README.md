@@ -74,7 +74,7 @@ Recommenced usage:
 ```js
 import { rcfile } from "rc-config-loader"
 
-function loadRcfile(rcFileName){
+function loadRcFile(rcFileName){
     try {
         const { config } = rcFile(rcFileName);
         return config;
@@ -83,7 +83,7 @@ function loadRcfile(rcFileName){
     }
 }
 // load config
-const config = loadRcfile("your-application");
+const config = loadRcFile("your-application");
 console.log(config); // => rcfile content
 ```
 
