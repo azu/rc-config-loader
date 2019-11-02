@@ -1,8 +1,8 @@
 "use strict";
-const describe = require("mocha").describe;
-const it = require("mocha").it;
-const assert = require("assert");
-const path = require("path");
+import assert from "assert";
+
+import path from "path";
+
 const rcConfigLoader = require("../src/rc-config-loader");
 
 describe("rc-config-loader", () => {
