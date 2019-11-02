@@ -59,7 +59,8 @@ export interface rcConfigLoaderOption {
 export declare function rcFile<R extends {}>(pkgName: string, opts?: rcConfigLoaderOption): {
     config: R;
     filePath: string;
-};
+} | undefined;
+
 ```
 
 `rcFile` return `{ config, filePath }` object.
@@ -67,10 +68,10 @@ export declare function rcFile<R extends {}>(pkgName: string, opts?: rcConfigLoa
 - `config`: it is config object
 - `filePath`: absolute path to config file
 
-**Note:** `rcFile` function throw an Error in such situation: 
-
-- If not found config file, throw an Error.
-- If the rcfile content is not parsable, throw an Error.
+**Note:**
+ 
+- `rcFile` function return `undefined` if the config file is not found
+- `rcFile` throw an Error if the config file config content is malformed (causing a parsing error)
 
 Recommenced usage:
 
@@ -79,9 +80,14 @@ import { rcFile } from "rc-config-loader"
 
 function loadRcFile(rcFileName){
     try {
-        const { config } = rcFile(rcFileName);
+        const results = rcFile(rcFileName);
+        // Not Found
+        if (!results) {
+            return {};
+        }
         return config;
     } catch (error) {
+        // Found it, but it is parsing error
         return {} ; // default value
     }
 }
