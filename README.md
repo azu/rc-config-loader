@@ -26,6 +26,9 @@ Find and load a configuration object from:
 
 - <del>Sync loading</del>
     - [cosmiconfig@3+](https://github.com/davidtheclark/cosmiconfig/blob/master/CHANGELOG.md#300) support `sync` option
+- Built-in TypeScript support
+
+If you want to async support and customize loader, recommenced to use [cosmiconfig](https://github.com/davidtheclark/cosmiconfig).
 
 ## Install
 
@@ -40,9 +43,11 @@ Install with [npm](https://www.npmjs.com/):
 ```ts
 export interface rcConfigLoaderOption {
     // does look for `package.json`
-    packageJSON?: boolean | {
-        fieldName: string;
-    };
+    packageJSON?:
+        | boolean
+        | {
+              fieldName: string;
+          };
     // if config file name is not same with packageName, set the name
     configFileName?: string;
     // treat default(no ext file) as some extension
@@ -50,26 +55,63 @@ export interface rcConfigLoaderOption {
     // where start to load
     cwd?: string;
 }
-export default function rcConfigLoader(packageName: string, options?: rcConfigLoaderOption): Object;
+/**
+ * Find and load rcfile, return { config, filePath }
+ * If not found any rcfile, throw an Error.
+ * @param {string} pkgName
+ * @param {rcConfigLoaderOption} [opts]
+ * @returns {{ config: Object, filePath:string } | undefined}
+ */
+export declare function rcFile<R extends {}>(pkgName: string, opts?: rcConfigLoaderOption): {
+    config: R;
+    filePath: string;
+} | undefined;
+
 ```
 
-`rcConfigLoader` return `{ config, filePath }` object.
+`rcFile` return `{ config, filePath }` object.
 
 - `config`: it is config object
 - `filePath`: absolute path to config file
 
-If not found config file, return `undefined`.
+**Note:**
+ 
+- `rcFile` function return `undefined` if the config file is not found
+- `rcFile` throw an Error if the config file content is malformed (causing a parsing error)
+
+Recommenced usage:
+
+```js
+import { rcFile } from "rc-config-loader"
+
+function loadRcFile(rcFileName){
+    try {
+        const results = rcFile(rcFileName);
+        // Not Found
+        if (!results) {
+            return {};
+        }
+        return config;
+    } catch (error) {
+        // Found it, but it is parsing error
+        return {} ; // default value
+    }
+}
+// load config
+const config = loadRcFile("your-application");
+console.log(config); // => rcfile content
+```
 
 ### Example
 
 ```js
 "use strict";
-const rcfile = require("rc-config-loader");
+import { rcFile } from "rc-config-loader"
 // load .eslintrc from current dir
-console.log(rcfile("eslint"));
+console.log(rcFile("eslint"));
 
 // load .eslintrc from specific path
-console.log(rcfile("eslint", {
+console.log(rcFile("eslint", {
     configFileName: `${__dirname}/test/fixtures/.eslintrc`
 }));
 /*
@@ -81,7 +123,7 @@ filePath: ${__dirname}/test/fixtures/.eslintrc
  */
 
 // load property from pacakge.json
-console.log(rcfile("rc-config-loader", {
+console.log(rcFile("rc-config-loader", {
     packageJSON: {
         fieldName: "directories"
     }
@@ -92,27 +134,30 @@ filePath: /path/to/package.json
  */
 
 // load .eslintrc from specific dir
-console.log(rcfile("eslint", {
+console.log(rcFile("eslint", {
     cwd: `${__dirname}/test/fixtures`
 }));
 
 // load specific filename from current dir
-console.log(rcfile("travis", {configFileName: ".travis"}));
+console.log(rcFile("travis", {configFileName: ".travis"}));
 /*
 config: { sudo: false, language: 'node_js', node_js: 'stable' }
 filePath: /path/to/.travis
  */
 
 // try to load as .json, .yml, js
-console.log(rcfile("bar", {
+console.log(rcFile("bar", {
     configFileName: `${__dirname}/test/fixtures/.barrc`,
     defaultExtension: [".json", ".yml", ".js"]
 }));
 
+// try to load as foobar, but .foobarrc is not found
+console.log(rcFile("foorbar")); // => undefined
+
 // try to load as .json, but it is not json
-// throw Error
+// throw SyntaxError
 try {
-    rcfile("unknown", {
+    rcFile("unknown", {
         // This is not json
         configFileName: `${__dirname}/test/fixtures/.unknownrc`,
         defaultExtension: ".json"
@@ -123,7 +168,6 @@ try {
     SyntaxError: Cannot read config file: /test/fixtures/.unknownrc
     */
 }
-
 ```
 
 ## Users
