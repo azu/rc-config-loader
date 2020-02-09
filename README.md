@@ -92,7 +92,7 @@ function loadRcFile(rcFileName){
         if (!results) {
             return {};
         }
-        return config;
+        return results.config;
     } catch (error) {
         // Found it, but it is parsing error
         return {} ; // default value
