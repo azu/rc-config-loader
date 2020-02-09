@@ -26,7 +26,8 @@ Find and load a configuration object from:
 
 - <del>Sync loading</del>
     - [cosmiconfig@3+](https://github.com/davidtheclark/cosmiconfig/blob/master/CHANGELOG.md#300) support `sync` option
-- Built-in TypeScript support
+- <del>Built-in TypeScript support</del>
+    - [comisconfig@6*](https://github.com/davidtheclark/cosmiconfig/blob/master/CHANGELOG.md#600) is written by TypeScript
 
 If you want to async support and customize loader, recommenced to use [cosmiconfig](https://github.com/davidtheclark/cosmiconfig).
 
