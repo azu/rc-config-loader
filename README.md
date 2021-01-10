@@ -115,7 +115,6 @@ It will check these files and return config file if found it.
 ### Example
 
 ```js
-"use strict";
 import { rcFile } from "rc-config-loader"
 // load .eslintrc from current dir
 console.log(rcFile("eslint"));
