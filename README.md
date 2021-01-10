@@ -103,6 +103,15 @@ const config = loadRcFile("your-application");
 console.log(config); // => rcfile content
 ```
 
+It will check these files and return config file if found it.
+
+- `.your-applicationrc.json`
+- `.your-applicationrc.yml`
+- `.your-applicationrc.yaml`
+- `.your-applicationrc.js`
+- [optional] `package.json`
+  - if `packageJSON` option is enabled
+
 ### Example
 
 ```js
