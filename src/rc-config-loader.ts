@@ -3,16 +3,15 @@
 // Original https://github.com/zkochan/rcfile
 import path from "path";
 import fs from "fs";
+import requireFromString from "require-from-string";
+import JSON5 from "json5";
 
 const debug = require("debug")("rc-config-loader");
-const requireFromString = require("require-from-string");
-const JSON5 = require("json5");
-
 const defaultLoaderByExt = {
     ".js": loadJSConfigFile,
     ".json": loadJSONConfigFile,
     ".yaml": loadYAMLConfigFile,
-    ".yml": loadYAMLConfigFile
+    ".yml": loadYAMLConfigFile,
 };
 
 const defaultOptions = {
@@ -20,7 +19,7 @@ const defaultOptions = {
     packageJSON: false,
     // treat default(no ext file) as some extension
     defaultExtension: [".json", ".yaml", ".yml", ".js"],
-    cwd: process.cwd()
+    cwd: process.cwd(),
 };
 
 export interface rcConfigLoaderOption {
@@ -72,19 +71,20 @@ export function rcFile<R extends {}>(
 
     const parts = splitPath(cwd);
     const loadersByOrder = Array.isArray(defaultExtension)
-        ? defaultExtension.map(extension => selectLoader(defaultLoaderByExt, extension))
+        ? defaultExtension.map((extension) => selectLoader(defaultLoaderByExt, extension))
         : selectLoader(defaultLoaderByExt, defaultExtension);
 
-    const loaderByExt = Object.assign({}, defaultLoaderByExt, {
-        "": loadersByOrder
-    });
+    const loaderByExt = {
+        ...defaultLoaderByExt,
+        "": loadersByOrder,
+    };
     return findConfig<R>({
         parts,
         loaderByExt,
         loadersByOrder,
         configFileName,
         packageJSON,
-        packageJSONFieldName
+        packageJSONFieldName,
     });
 }
 
@@ -101,11 +101,11 @@ function findConfig<R extends {}>({
     loadersByOrder,
     configFileName,
     packageJSON,
-    packageJSONFieldName
+    packageJSONFieldName,
 }: {
     parts: string[];
     loaderByExt: {
-        [index: string]: Loader;
+        [index: string]: Loader | Loader[];
     };
     loadersByOrder: Loader | Loader[];
     configFileName: string;
@@ -135,7 +135,7 @@ function findConfig<R extends {}>({
             }
             return {
                 config: result,
-                filePath: configLocation
+                filePath: configLocation,
             };
         }
         for (let i = 0; i < loaders.length; i++) {
@@ -146,7 +146,7 @@ function findConfig<R extends {}>({
             }
             return {
                 config: result,
-                filePath: configLocation
+                filePath: configLocation,
             };
         }
     }
@@ -158,7 +158,7 @@ function findConfig<R extends {}>({
             if (pkgJSON[packageJSONFieldName]) {
                 return {
                     config: pkgJSON[packageJSONFieldName],
-                    filePath: pkgJSONLoc
+                    filePath: pkgJSONLoc,
                 };
             }
         }
@@ -211,13 +211,11 @@ function readFile(filePath: string) {
 
 function loadYAMLConfigFile(filePath: string, suppress: boolean) {
     debug(`Loading YAML config file: ${filePath}`);
-
     // lazy load YAML to improve performance when not used
     const yaml = require("js-yaml");
-
     try {
         // empty YAML file can be null, so always use
-        return yaml.safeLoad(readFile(filePath)) || {};
+        return yaml.load(readFile(filePath)) || {};
     } catch (error) {
         debug(`Error reading YAML file: ${filePath}`);
         if (!suppress) {

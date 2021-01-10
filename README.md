@@ -1,4 +1,4 @@
-# rc-config-loader [![Build Status](https://travis-ci.org/azu/rc-config-loader.svg?branch=master)](https://travis-ci.org/azu/rc-config-loader)
+# rc-config-loader [![Actions Status: test](https://github.com/azu/rc-config-loader/workflows/test/badge.svg)](https://github.com/azu/rc-config-loader/actions?query=workflow%3A"test")
 
 Load config from `.{product}rc.{json,yml,js}` file.
 
