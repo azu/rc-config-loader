@@ -131,7 +131,7 @@ config: { extends: 'standard',
 filePath: ${__dirname}/test/fixtures/.eslintrc
  */
 
-// load property from pacakge.json
+// load property from package.json
 console.log(rcFile("rc-config-loader", {
     packageJSON: {
         fieldName: "directories"
