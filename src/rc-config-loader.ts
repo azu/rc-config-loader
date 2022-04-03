@@ -105,7 +105,7 @@ function findConfig<R extends {}>({
 }: {
     parts: string[];
     loaderByExt: {
-        [index: string]: Loader;
+        [index: string]: Loader | Loader[];
     };
     loadersByOrder: Loader | Loader[];
     configFileName: string;
