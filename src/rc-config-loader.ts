@@ -12,7 +12,7 @@ const defaultLoaderByExt = {
     ".js": loadJSConfigFile,
     ".json": loadJSONConfigFile,
     ".yaml": loadYAMLConfigFile,
-    ".yml": loadYAMLConfigFile,
+    ".yml": loadYAMLConfigFile
 };
 
 const defaultOptions = {
@@ -20,7 +20,7 @@ const defaultOptions = {
     packageJSON: false,
     // treat default(no ext file) as some extension
     defaultExtension: [".json", ".yaml", ".yml", ".js", ".cjs"],
-    cwd: process.cwd(),
+    cwd: process.cwd()
 };
 
 export interface rcConfigLoaderOption {
@@ -77,7 +77,7 @@ export function rcFile<R extends {}>(
 
     const loaderByExt = {
         ...defaultLoaderByExt,
-        "": loadersByOrder,
+        "": loadersByOrder
     };
     return findConfig<R>({
         parts,
@@ -85,7 +85,7 @@ export function rcFile<R extends {}>(
         loadersByOrder,
         configFileName,
         packageJSON,
-        packageJSONFieldName,
+        packageJSONFieldName
     });
 }
 
@@ -102,7 +102,7 @@ function findConfig<R extends {}>({
     loadersByOrder,
     configFileName,
     packageJSON,
-    packageJSONFieldName,
+    packageJSONFieldName
 }: {
     parts: string[];
     loaderByExt: {
@@ -136,7 +136,7 @@ function findConfig<R extends {}>({
             }
             return {
                 config: result,
-                filePath: configLocation,
+                filePath: configLocation
             };
         }
         for (let i = 0; i < loaders.length; i++) {
@@ -147,7 +147,7 @@ function findConfig<R extends {}>({
             }
             return {
                 config: result,
-                filePath: configLocation,
+                filePath: configLocation
             };
         }
     }
@@ -159,7 +159,7 @@ function findConfig<R extends {}>({
             if (pkgJSON[packageJSONFieldName]) {
                 return {
                     config: pkgJSON[packageJSONFieldName],
-                    filePath: pkgJSONLoc,
+                    filePath: pkgJSONLoc
                 };
             }
         }
@@ -183,7 +183,7 @@ function loadJSConfigFile(filePath: string, suppress: boolean) {
     try {
         const content = fs.readFileSync(filePath, "utf-8");
         return requireFromString(content, filePath);
-    } catch (error) {
+    } catch (error: any) {
         debug(`Error reading JavaScript file: ${filePath}`);
         if (!suppress) {
             error.message = `Cannot read config file: ${filePath}\nError: ${error.message}`;
@@ -197,7 +197,7 @@ function loadJSONConfigFile(filePath: string, suppress: boolean) {
 
     try {
         return JSON5.parse(readFile(filePath));
-    } catch (error) {
+    } catch (error: any) {
         debug(`Error reading JSON file: ${filePath}`);
         if (!suppress) {
             error.message = `Cannot read config file: ${filePath}\nError: ${error.message}`;
@@ -217,7 +217,7 @@ function loadYAMLConfigFile(filePath: string, suppress: boolean) {
     try {
         // empty YAML file can be null, so always use
         return yaml.load(readFile(filePath)) || {};
-    } catch (error) {
+    } catch (error: any) {
         debug(`Error reading YAML file: ${filePath}`);
         if (!suppress) {
             error.message = `Cannot read config file: ${filePath}\nError: ${error.message}`;
