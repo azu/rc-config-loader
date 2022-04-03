@@ -8,6 +8,7 @@ import JSON5 from "json5";
 
 const debug = require("debug")("rc-config-loader");
 const defaultLoaderByExt = {
+    ".cjs": loadJSConfigFile,
     ".js": loadJSConfigFile,
     ".json": loadJSONConfigFile,
     ".yaml": loadYAMLConfigFile,
@@ -18,7 +19,7 @@ const defaultOptions = {
     // does look for `package.json`
     packageJSON: false,
     // treat default(no ext file) as some extension
-    defaultExtension: [".json", ".yaml", ".yml", ".js"],
+    defaultExtension: [".json", ".yaml", ".yml", ".js", ".cjs"],
     cwd: process.cwd(),
 };
 
@@ -40,7 +41,7 @@ export interface rcConfigLoaderOption {
 type Loader = <R extends object>(fileName: string, suppress: boolean) => R;
 
 const selectLoader = (defaultLoaderByExt: { [index: string]: Loader }, extension: string) => {
-    if (![".json", ".yaml", ".yml", ".js"].includes(extension)) {
+    if (!defaultOptions.defaultExtension.includes(extension)) {
         throw new Error(`${extension} is not supported.`);
     }
     return defaultLoaderByExt[extension];

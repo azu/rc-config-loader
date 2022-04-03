@@ -43,6 +43,15 @@ describe("rc-config-loader", () => {
         assert.deepStrictEqual(config, { bar: "bar" });
     });
 
+    it("should read cjs config in current directory", () => {
+        const results = rcFile("baz", { cwd: path.join(__dirname, "fixtures") });
+        if (!results) {
+            throw new Error("not found");
+        }
+        const { config } = results;
+        assert.deepStrictEqual(config, { baz: "baz" });
+    });
+
     it("should read js config by { configFileName }", () => {
         const results = rcFile("textlint", { configFileName: path.join(__dirname, "fixtures", ".textlintrc") });
         if (!results) {
