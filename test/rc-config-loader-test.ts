@@ -54,8 +54,8 @@ describe("rc-config-loader", () => {
             rules: {
                 a: true,
                 b: true,
-                c: true
-            }
+                c: true,
+            },
         });
     });
 
@@ -71,7 +71,7 @@ describe("rc-config-loader", () => {
     it("should read from package.json if no separate config file found", () => {
         const results = rcFile("qar", {
             cwd: path.join(__dirname, "fixtures"),
-            packageJSON: true
+            packageJSON: true,
         });
         if (!results) {
             throw new Error("not found");
@@ -85,8 +85,8 @@ describe("rc-config-loader", () => {
         const results = rcFile("qar", {
             cwd: path.join(__dirname, "fixtures"),
             packageJSON: {
-                fieldName: "custom"
-            }
+                fieldName: "custom",
+            },
         });
         if (!results) {
             throw new Error("not found");
@@ -115,7 +115,7 @@ describe("rc-config-loader", () => {
     it("should search multiple file type if set multiple extensions to defaultExtension", () => {
         const results = rcFile<{ unknown: string }>("unknown", {
             cwd: path.join(__dirname, "fixtures"),
-            defaultExtension: [".json", ".yml", ".js"]
+            defaultExtension: [".json", ".yml", ".js"],
         });
         if (!results) {
             throw new Error("not found");
@@ -130,7 +130,7 @@ describe("rc-config-loader", () => {
         assert.throws(() => {
             rcFile("invalid-config", {
                 defaultExtension: ".js",
-                cwd: path.join(__dirname, "fixtures")
+                cwd: path.join(__dirname, "fixtures"),
             });
         }, Error);
     });
@@ -138,7 +138,7 @@ describe("rc-config-loader", () => {
         assert.throws(() => {
             rcFile("invalid-config", {
                 defaultExtension: ".js",
-                cwd: path.join(__dirname, "fixtures")
+                cwd: path.join(__dirname, "fixtures"),
             });
         }, Error);
     });

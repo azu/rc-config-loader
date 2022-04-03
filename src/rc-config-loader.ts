@@ -12,7 +12,7 @@ const defaultLoaderByExt = {
     ".js": loadJSConfigFile,
     ".json": loadJSONConfigFile,
     ".yaml": loadYAMLConfigFile,
-    ".yml": loadYAMLConfigFile
+    ".yml": loadYAMLConfigFile,
 };
 
 const defaultOptions = {
@@ -20,7 +20,7 @@ const defaultOptions = {
     packageJSON: false,
     // treat default(no ext file) as some extension
     defaultExtension: [".json", ".yaml", ".yml", ".js"],
-    cwd: process.cwd()
+    cwd: process.cwd(),
 };
 
 export interface rcConfigLoaderOption {
@@ -72,11 +72,11 @@ export function rcFile<R extends {}>(
 
     const parts = splitPath(cwd);
     const loadersByOrder = Array.isArray(defaultExtension)
-        ? defaultExtension.map(extension => selectLoader(defaultLoaderByExt, extension))
+        ? defaultExtension.map((extension) => selectLoader(defaultLoaderByExt, extension))
         : selectLoader(defaultLoaderByExt, defaultExtension);
 
     const loaderByExt = Object.assign({}, defaultLoaderByExt, {
-        "": loadersByOrder
+        "": loadersByOrder,
     });
     return findConfig<R>({
         parts,
@@ -84,7 +84,7 @@ export function rcFile<R extends {}>(
         loadersByOrder,
         configFileName,
         packageJSON,
-        packageJSONFieldName
+        packageJSONFieldName,
     });
 }
 
@@ -101,7 +101,7 @@ function findConfig<R extends {}>({
     loadersByOrder,
     configFileName,
     packageJSON,
-    packageJSONFieldName
+    packageJSONFieldName,
 }: {
     parts: string[];
     loaderByExt: {
@@ -135,7 +135,7 @@ function findConfig<R extends {}>({
             }
             return {
                 config: result,
-                filePath: configLocation
+                filePath: configLocation,
             };
         }
         for (let i = 0; i < loaders.length; i++) {
@@ -146,7 +146,7 @@ function findConfig<R extends {}>({
             }
             return {
                 config: result,
-                filePath: configLocation
+                filePath: configLocation,
             };
         }
     }
@@ -158,7 +158,7 @@ function findConfig<R extends {}>({
             if (pkgJSON[packageJSONFieldName]) {
                 return {
                     config: pkgJSON[packageJSONFieldName],
-                    filePath: pkgJSONLoc
+                    filePath: pkgJSONLoc,
                 };
             }
         }

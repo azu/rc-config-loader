@@ -5,14 +5,14 @@ const { rcFile } = require("./lib/rc-config-loader");
 // load .eslintrc from current dir
 console.log(
     rcFile("eslint", {
-        cwd: `${__dirname}/test/fixtures/`
+        cwd: `${__dirname}/test/fixtures/`,
     })
 );
 
 // load .eslintrc from specific path
 console.log(
     rcFile("eslint", {
-        configFileName: `${__dirname}/test/fixtures/.eslintrc`
+        configFileName: `${__dirname}/test/fixtures/.eslintrc`,
     })
 );
 /*
@@ -26,8 +26,8 @@ console.log(
 console.log(
     rcFile("rc-config-loader", {
         packageJSON: {
-            fieldName: "directories"
-        }
+            fieldName: "directories",
+        },
     })
 );
 /*
@@ -37,7 +37,7 @@ console.log(
 // load .eslintrc from specific dir
 console.log(
     rcFile("eslint", {
-        cwd: `${__dirname}/test/fixtures`
+        cwd: `${__dirname}/test/fixtures`,
     })
 );
 
@@ -51,7 +51,7 @@ console.log(rcFile("travis", { configFileName: ".travis" }));
 console.log(
     rcFile("bar", {
         configFileName: `${__dirname}/test/fixtures/.barrc`,
-        defaultExtension: [".json", ".yml", ".js"]
+        defaultExtension: [".json", ".yml", ".js"],
     })
 );
 
@@ -60,7 +60,7 @@ console.log(
 try {
     rcFile("unknown", {
         configFileName: `${__dirname}/test/fixtures/.unknownrc`,
-        defaultExtension: ".json"
+        defaultExtension: ".json",
     });
 } catch (error) {
     console.log(error);
