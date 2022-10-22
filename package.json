@@ -60,7 +60,8 @@
     "debug": "^4.3.4",
     "js-yaml": "^4.1.0",
     "json5": "^2.2.1",
-    "require-from-string": "^2.0.2"
+    "require-from-string": "^2.0.2",
+    "typescript": "^4.8.4"
   },
   "devDependencies": {
     "@types/mocha": "^9.1.0",
@@ -70,7 +71,6 @@
     "mocha": "^9.2.2",
     "prettier": "^2.6.2",
     "ts-node": "^10.7.0",
-    "ts-node-test-register": "^10.0.0",
-    "typescript": "^4.6.3"
+    "ts-node-test-register": "^10.0.0"
   }
 }

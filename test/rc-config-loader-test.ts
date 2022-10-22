@@ -43,6 +43,16 @@ describe("rc-config-loader", () => {
         assert.deepStrictEqual(config, { bar: "bar" });
     });
 
+    it("should read ts config in current directory", () => {
+        const results = rcFile("ts", { cwd: path.join(__dirname, "fixtures") });
+
+        if (!results) {
+            throw new Error("not found");
+        }
+        const { config } = results;
+        assert.deepStrictEqual(config, { foo: "foo" });
+    });
+
     it("should read cjs config in current directory", () => {
         const results = rcFile("baz", { cwd: path.join(__dirname, "fixtures") });
         if (!results) {

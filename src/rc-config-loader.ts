@@ -5,11 +5,13 @@ import path from "path";
 import fs from "fs";
 import requireFromString from "require-from-string";
 import JSON5 from "json5";
+import ts from "typescript";
 
 const debug = require("debug")("rc-config-loader");
 const defaultLoaderByExt = {
     ".cjs": loadJSConfigFile,
     ".js": loadJSConfigFile,
+    ".ts": loadTSConfigFile,
     ".json": loadJSONConfigFile,
     ".yaml": loadYAMLConfigFile,
     ".yml": loadYAMLConfigFile
@@ -19,7 +21,7 @@ const defaultOptions = {
     // does look for `package.json`
     packageJSON: false,
     // treat default(no ext file) as some extension
-    defaultExtension: [".json", ".yaml", ".yml", ".js", ".cjs"],
+    defaultExtension: [".json", ".yaml", ".yml", ".ts", ".js", ".cjs"],
     cwd: process.cwd()
 };
 
@@ -186,6 +188,26 @@ function loadJSConfigFile(filePath: string, suppress: boolean) {
     } catch (error: any) {
         debug(`Error reading JavaScript file: ${filePath}`);
         if (!suppress) {
+            error.message = `Cannot read config file: ${filePath}\nError: ${error.message}`;
+            throw error;
+        }
+    }
+}
+
+function loadTSConfigFile(filePath: string, supperes: boolean) {
+    debug(`Loading TypeScript config file: ${filePath}`);
+
+    try {
+        const code = fs.readFileSync(filePath, "utf-8");
+        const content = ts.transpile(code, {
+            module: ts.ModuleKind.Node16,
+            target: ts.ScriptTarget.ES5
+        });
+
+        return requireFromString(content, filePath).default;
+    } catch (error: any) {
+        debug(`Error reading TypeScript file: ${filePath}`);
+        if (!supperes) {
             error.message = `Cannot read config file: ${filePath}\nError: ${error.message}`;
             throw error;
         }
