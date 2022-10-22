@@ -109,6 +109,8 @@ It will check these files and return config file if found it.
 - `.your-applicationrc.yml`
 - `.your-applicationrc.yaml`
 - `.your-applicationrc.js`
+- `.your-applicationrc.cjs`
+- `.your-applicationrc.ts`
 - [optional] `package.json`
   - if `packageJSON` option is enabled
 
