@@ -5,9 +5,19 @@ import path from "path";
 import fs from "fs";
 import requireFromString from "require-from-string";
 import JSON5 from "json5";
+import type {
+    PossibleUndefined,
+    rcConfigLoaderOption,
+    rcConfigResult,
+    RequiredOption,
+    ExtensionName,
+    ExtensionLoaderMap,
+    Loader
+} from "./types";
 
 const debug = require("debug")("rc-config-loader");
-const defaultLoaderByExt = {
+
+const defaultLoaderByExt: ExtensionLoaderMap = {
     ".cjs": loadJSConfigFile,
     ".js": loadJSConfigFile,
     ".json": loadJSONConfigFile,
@@ -15,32 +25,14 @@ const defaultLoaderByExt = {
     ".yml": loadYAMLConfigFile
 };
 
-const defaultOptions = {
-    // does look for `package.json`
+const defaultOptions: Required<Pick<rcConfigLoaderOption, RequiredOption>> &
+    Omit<rcConfigLoaderOption, RequiredOption> = {
     packageJSON: false,
-    // treat default(no ext file) as some extension
     defaultExtension: [".json", ".yaml", ".yml", ".js", ".cjs"],
     cwd: process.cwd()
 };
 
-export interface rcConfigLoaderOption {
-    // does look for `package.json`
-    packageJSON?:
-        | boolean
-        | {
-              fieldName: string;
-          };
-    // if config file name is not same with packageName, set the name
-    configFileName?: string;
-    // treat default(no ext file) as some extension
-    defaultExtension?: string | string[];
-    // where start to load
-    cwd?: string;
-}
-
-type Loader = <R extends object>(fileName: string, suppress: boolean) => R;
-
-const selectLoader = (defaultLoaderByExt: { [index: string]: Loader }, extension: string) => {
+const selectLoader = (defaultLoaderByExt: ExtensionLoaderMap, extension: ExtensionName): Loader => {
     if (!defaultOptions.defaultExtension.includes(extension)) {
         throw new Error(`${extension} is not supported.`);
     }
@@ -57,12 +49,7 @@ const selectLoader = (defaultLoaderByExt: { [index: string]: Loader }, extension
 export function rcFile<R extends {}>(
     pkgName: string,
     opts: rcConfigLoaderOption = {}
-):
-    | {
-          config: R;
-          filePath: string;
-      }
-    | undefined {
+): PossibleUndefined<rcConfigResult<R>> {
     // path/to/config or basename of config file.
     const configFileName = opts.configFileName || `.${pkgName}rc`;
     const defaultExtension = opts.defaultExtension || defaultOptions.defaultExtension;
