@@ -59,7 +59,7 @@
   "dependencies": {
     "debug": "^4.3.4",
     "js-yaml": "^4.1.0",
-    "json5": "^2.2.1",
+    "json5": "^2.2.2",
     "require-from-string": "^2.0.2"
   },
   "devDependencies": {
