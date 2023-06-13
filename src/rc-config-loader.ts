@@ -142,7 +142,7 @@ function findConfig<R extends {}>({
     if (packageJSON) {
         const pkgJSONLoc = join(parts, "package.json");
         if (fs.existsSync(pkgJSONLoc)) {
-            const pkgJSON = require(pkgJSONLoc);
+            const pkgJSON = JSON5.parse(readFile(pkgJSONLoc));
             if (pkgJSON[packageJSONFieldName]) {
                 return {
                     config: pkgJSON[packageJSONFieldName],
