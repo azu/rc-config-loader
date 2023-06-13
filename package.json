@@ -1,6 +1,6 @@
 {
   "name": "rc-config-loader",
-  "version": "4.1.2",
+  "version": "4.1.3",
   "description": "load config file from .{product}rc.{json,yml,js}",
   "keywords": [
     "config",
