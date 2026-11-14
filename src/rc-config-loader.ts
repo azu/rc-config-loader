@@ -9,6 +9,7 @@ import type {
     PossibleUndefined,
     rcConfigLoaderOption,
     rcConfigResult,
+    loadConfigFileOption,
     RequiredOption,
     ExtensionName,
     ExtensionLoaderMap,
@@ -74,6 +75,54 @@ export function rcFile<R extends {}>(
         packageJSON,
         packageJSONFieldName
     });
+}
+
+/**
+ * Load exactly one config file, return { config, filePath }
+ * - `filePath` is resolved from `opts.cwd`(default: `process.cwd()`)
+ * - It does not search parent directories, does not append any extension, and does not read `package.json`
+ * - The loader is selected by the extension of `filePath`
+ *   - `.json` → JSON, `.yaml`/`.yml` → YAML, `.js`/`.cjs` → JavaScript
+ *   - Other names like `.secretlintrc` are tried as JSON, YAML, then JavaScript
+ * - If the file does not exist, throw an Error that has `code: "ENOENT"`
+ * - If the file can not be parsed, throw an Error
+ * @param {string} filePath
+ * @param {loadConfigFileOption} [opts]
+ * @returns {{ config: Object, filePath:string }}
+ */
+export function loadConfigFile<R extends {}>(filePath: string, opts: loadConfigFileOption = {}): rcConfigResult<R> {
+    const cwd = opts.cwd || defaultOptions.cwd;
+    const configLocation = path.resolve(cwd, filePath);
+    if (!fs.existsSync(configLocation)) {
+        const error: NodeJS.ErrnoException = new Error(`Config file not found: ${configLocation}`);
+        error.code = "ENOENT";
+        error.path = configLocation;
+        throw error;
+    }
+    const ext = path.extname(configLocation);
+    if (Object.prototype.hasOwnProperty.call(defaultLoaderByExt, ext)) {
+        const loader = defaultLoaderByExt[ext as ExtensionName];
+        return {
+            config: loader<R>(configLocation, false),
+            filePath: configLocation
+        };
+    }
+    // Unknown or no extension like `.secretlintrc`: try JSON, YAML, then JavaScript.
+    // Errors are suppressed except for the last loader, so the error of JavaScript loader is thrown when all fail.
+    const fallbackLoaders: Loader[] = [loadJSONConfigFile, loadYAMLConfigFile];
+    for (const loader of fallbackLoaders) {
+        const result = loader<R>(configLocation, true);
+        if (result !== undefined) {
+            return {
+                config: result,
+                filePath: configLocation
+            };
+        }
+    }
+    return {
+        config: loadJSConfigFile(configLocation, false),
+        filePath: configLocation
+    };
 }
 
 /**

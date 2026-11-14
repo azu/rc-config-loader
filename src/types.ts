@@ -30,3 +30,8 @@ export interface rcConfigLoaderOption {
     /** where start to load */
     cwd?: string;
 }
+
+export interface loadConfigFileOption {
+    /** the base directory to resolve a relative file path. Default: `process.cwd()` */
+    cwd?: string;
+}

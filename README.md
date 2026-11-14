@@ -112,6 +112,54 @@ It will check these files and return config file if found it.
 - [optional] `package.json`
   - if `packageJSON` option is enabled
 
+### Load exactly one config file
+
+`loadConfigFile` loads exactly one config file.
+Use it when a user specifies the config file path by a CLI option like `--config <path>`.
+
+```ts
+export interface loadConfigFileOption {
+    // the base directory to resolve a relative file path. Default: `process.cwd()`
+    cwd?: string;
+}
+export declare function loadConfigFile<R extends {}>(filePath: string, opts?: loadConfigFileOption): {
+    config: R;
+    filePath: string;
+};
+```
+
+- `filePath` is resolved from `opts.cwd`
+- It does not search parent directories, does not append any extension, and does not read `package.json`
+- The loader is selected by the extension of `filePath`
+    - `.json` → JSON(JSON5)
+    - `.yaml` or `.yml` → YAML
+    - `.js` or `.cjs` → JavaScript
+    - Other names like `.your-applicationrc` are tried as JSON, YAML, then JavaScript
+- It returns `{ config, filePath }`, and `filePath` is the absolute path to the config file
+
+**Note:**
+
+- `loadConfigFile` throws an Error that has `code: "ENOENT"` if the config file is not found
+- `loadConfigFile` throws an Error if the config file content is malformed (causing a parsing error)
+
+```js
+import { loadConfigFile } from "rc-config-loader"
+
+function loadConfigFromOption(configFilePath) {
+    try {
+        return loadConfigFile(configFilePath).config;
+    } catch (error) {
+        if (error.code === "ENOENT") {
+            throw new Error(`Config file not found: ${configFilePath}`);
+        }
+        // Found it, but it is parsing error
+        throw error;
+    }
+}
+// load ./config/your-application.json, not ../config/your-application.json
+const config = loadConfigFromOption("config/your-application.json");
+```
+
 ### Example
 
 ```js
