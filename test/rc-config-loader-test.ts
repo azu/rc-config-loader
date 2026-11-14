@@ -76,6 +76,34 @@ describe("rc-config-loader", () => {
         assert.deepStrictEqual(config, { foo: "bar" });
     });
 
+    it("should read empty yaml config as empty object", () => {
+        const results = rcFile("emptyyaml", { cwd: path.join(__dirname, "fixtures") });
+        if (!results) {
+            throw new Error("not found");
+        }
+        assert.deepStrictEqual(results.config, {});
+    });
+
+    it("should read comment-only yaml config as empty object", () => {
+        const results = rcFile("commentyaml", { cwd: path.join(__dirname, "fixtures") });
+        if (!results) {
+            throw new Error("not found");
+        }
+        assert.deepStrictEqual(results.config, {});
+    });
+
+    it("should support merge keys and timestamps in yaml config", () => {
+        const results = rcFile("mergeyaml", { cwd: path.join(__dirname, "fixtures") });
+        if (!results) {
+            throw new Error("not found");
+        }
+        assert.deepStrictEqual(results.config, {
+            base: { foo: 1 },
+            config: { foo: 1, bar: 2 },
+            date: new Date(Date.UTC(2020, 0, 1))
+        });
+    });
+
     it("should read from package.json if no separate config file found", () => {
         const results = rcFile("qar", {
             cwd: path.join(__dirname, "fixtures"),
