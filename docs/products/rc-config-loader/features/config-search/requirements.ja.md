@@ -86,9 +86,15 @@ CLIツールの作者として、ツールが受け付ける拡張子だけを�
 
 Scenario: `extensions`を省略した場合、JSONをJavaScriptより優先する
 
-- Given: 起点に`.priorityrc.json`と`.priorityrc.cjs`がある。
+- Given: 起点に`.priorityrc.json`と`.priorityrc.js`がある。
 - When: ツールが`rcFile("priority", { cwd: 起点 })`を呼ぶ。
 - Then: `<起点>/.priorityrc.json`の設定が返る。
+
+Scenario: `extensions`を省略した場合、`.cjs`、`.mjs`、`.cts`、`.mts`は探さない
+
+- Given: 起点から親までで、`.optinrc`の候補は`.optinrc.cjs`だけである。
+- When: ツールが`rcFile("optin", { cwd: 起点 })`を呼び、続けて`rcFile("optin", { cwd: 起点, extensions: [".json", ".cjs"] })`を呼ぶ。
+- Then: 前者は`undefined`を返し、後者は`<起点>/.optinrc.cjs`の設定を返す。
 
 Scenario: `extensions`を指定した場合、その拡張子の候補だけを探す
 
@@ -166,7 +172,7 @@ Scenario: 見つかった拡張子付きのファイルが読めない場合、�
 - `configFileName`: 探すファイルの名前。省略時は`.<pkgName>rc`
 - `cwd`: 探索の起点。省略時は現在のディレクトリ
 - `packageJSON`: `package.json`を読むかどうかと、読むフィールドの名前
-- `extensions`: 探す拡張子と、その優先順。省略時は`[".json", ".yaml", ".yml", ".js", ".cjs", ".mjs", ".ts", ".cts", ".mts"]`
+- `extensions`: 探す拡張子と、その優先順。省略時は`[".json", ".yaml", ".yml", ".js", ".ts"]`。`.cjs`、`.mjs`、`.cts`、`.mts`は、指定したときだけ探す
 
 **出力:** `{ config, filePath }`。`filePath`は読んだファイルの絶対パスです。見つからなければ`undefined`です。
 

@@ -33,7 +33,7 @@ When `packageJSON` is an object, its `fieldName` is the field name. Otherwise, `
 ### 2. Decide the extensions to search
 
 `resolveAllowedExtensions` decides the array of extensions allowed to search (`allowedExtensions`).
-When `extensions` is omitted, it returns the default `defaultExtensions` (`[".json", ".yaml", ".yml", ".js", ".cjs", ".mjs", ".ts", ".cts", ".mts"]`). When it is given, it returns that array.
+When `extensions` is omitted, it returns the default of the search `defaultSearchExtensions` (`[".json", ".yaml", ".yml", ".js", ".ts"]`). When it is given, it returns that array.
 When the given array is empty, it throws `extensions should be a non-empty array.`, and when it includes an extension not in the table, it throws `<extension> is not supported.`.
 
 ### 3. Decide the loaders for the candidate without an extension
@@ -50,7 +50,7 @@ When no loader is collected, the empty-string extension is not added.
 
 `cwd` is made absolute with `path.resolve` and split by the separator into the array `parts`.
 `findConfig` checks, in the order of the keys of `loaderByExt`, the location made by joining the directory of `parts` and `configFileName + extension` with `path.resolve`.
-The order of the keys is the order in which the table was built. When `extensions` is omitted, it is `.json`, `.yaml`, `.yml`, `.js`, `.cjs`, `.mjs`, `.ts`, `.cts`, `.mts`, and the empty string.
+The order of the keys is the order in which the table was built. When `extensions` is omitted, it is `.json`, `.yaml`, `.yml`, `.js`, `.ts`, and the empty string.
 Because the join uses `path.resolve`, the directory is ignored when `configFileName` is an absolute path.
 
 When a file is found with `fs.existsSync`, it is read as follows.
@@ -134,9 +134,12 @@ None.
 No alternatives or reasons are recorded for searching up through the parents, for checking the candidates with an extension first, or for checking `package.json` after the candidates of the same directory, so they are unknown.
 The search is based on [zkochan/rcfile](https://github.com/zkochan/rcfile).
 
-### Limiting by default when `extensions` is omitted
+### Searching every extension when `extensions` is omitted
 
-Supporting TypeScript and ECMAScript Modules adds extensions to search, so limiting them by default was an option. To keep existing tools from losing configuration files they can read, every extension is searched when the option is omitted.
+Supporting TypeScript and ECMAScript Modules adds extensions to search. Searching every extension by default was an option, so that existing tools would not lose configuration files they can read.
+Each extension adds one existence check per directory, and the search goes up to the root when nothing is found. With every extension, a search with no configuration from a directory 8 levels deep checked 150 paths, while 90 with the 5 extensions of v4.
+So the default is limited to `.json`, `.yaml`, `.yml`, `.js`, and `.ts`, and `.cjs`, `.mjs`, `.cts`, and `.mts` are searched only when given in `extensions` (a major release).
+`.cjs` was searched by default before, so a tool whose users have `.<name>rc.cjs` (for example `.secretlintrc.cjs` and `.textlintrc.cjs`) needs to add `.cjs` to `extensions` to keep finding it.
 
 ### Keeping `defaultExtension` next to `extensions`
 
@@ -150,7 +153,7 @@ When it is given, it is not silently ignored; an error shows what to use instead
 Before the consolidation, the candidates with an extension were checked in the order `.cjs`, `.js`, `.json`, `.yaml`, `.yml`.
 With that order as the default, the candidate without an extension would also be tried as JavaScript first.
 So the default starts with `.json`, matching the default order for the candidate without an extension (JSON, YAML, JavaScript).
-When a directory has both `.foorc.cjs` and `.foorc.json`, `.cjs` was chosen before, and `.json` is chosen now.
+When a directory has both `.foorc.cjs` and `.foorc.json`, `.cjs` was chosen before, and `.json` is chosen now. `.cjs` is not searched by default now.
 
 ## Open questions
 

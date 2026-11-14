@@ -11,8 +11,8 @@ Find and load a configuration object from:
 - a `package.json` property if it is needed
 - a JSON or YAML, JS, TypeScript "rc file"
     - `.<product>rc` or `.<product>rc.json` or `.<product>rc.js` or`.<product>rc.yml`, `.<product>rc.yaml`
-    - `.<product>rc.cjs`, `.<product>rc.mjs`
-    - `.<product>rc.ts`, `.<product>rc.cts`, `.<product>rc.mts`
+    - `.<product>rc.ts`
+    - `.<product>rc.cjs`, `.<product>rc.mjs`, `.<product>rc.cts`, `.<product>rc.mts` (only when they are in `extensions` option)
 - CommonJS and ES Modules config file
 - TypeScript support
     - Includes `.d.ts`
@@ -64,7 +64,8 @@ export interface rcConfigLoaderOption {
     cwd?: string;
     // extensions to search, in order of priority
     // A file without extension like `.<product>rc` is tried as the formats of `.json`, `.yaml`/`.yml`, and `.js` in this list
-    // Default: [".json", ".yaml", ".yml", ".js", ".cjs", ".mjs", ".ts", ".cts", ".mts"]
+    // Default: [".json", ".yaml", ".yml", ".js", ".ts"]
+    // `.cjs`, `.mjs`, `.cts`, and `.mts` are searched only when they are given
     extensions?: string[];
 }
 /**
@@ -120,12 +121,11 @@ It will check these files and return config file if found it.
 - `.your-applicationrc.yaml`
 - `.your-applicationrc.yml`
 - `.your-applicationrc.js`
-- `.your-applicationrc.cjs`
-- `.your-applicationrc.mjs`
 - `.your-applicationrc.ts`
-- `.your-applicationrc.cts`
-- `.your-applicationrc.mts`
 - `.your-applicationrc` (tried as JSON, YAML, then JavaScript)
+
+`.your-applicationrc.cjs`, `.your-applicationrc.mjs`, `.your-applicationrc.cts`, and `.your-applicationrc.mts` are not searched by default.
+Add them to `extensions` option if your tool supports them. See [Limit the extensions](#limit-the-extensions).
 - [optional] `package.json`
   - if `packageJSON` option is enabled
 
@@ -212,6 +212,14 @@ export default config;
 Both `rcFile` and `loadConfigFile` accept `extensions` option to limit the extensions of config files.
 Use it when your tool does not want to run JavaScript or TypeScript config files.
 
+| | Default `extensions` |
+| --- | --- |
+| `rcFile` | `[".json", ".yaml", ".yml", ".js", ".ts"]` |
+| `loadConfigFile` | `[".json", ".yaml", ".yml", ".js", ".cjs", ".mjs", ".ts", ".cts", ".mts"]` |
+
+`rcFile` searches fewer extensions by default, because each extension adds an existence check in every directory up to the root.
+`loadConfigFile` reads only the given file, so it allows every supported extension by default.
+
 ```js
 import { rcFile, loadConfigFile } from "rc-config-loader"
 
@@ -219,6 +227,11 @@ import { rcFile, loadConfigFile } from "rc-config-loader"
 // The order of extensions is the priority of the search
 rcFile("your-application", {
     extensions: [".json", ".yaml", ".yml"]
+});
+
+// also search .your-applicationrc.cjs and .your-applicationrc.mjs
+rcFile("your-application", {
+    extensions: [".json", ".yaml", ".yml", ".js", ".cjs", ".mjs", ".ts"]
 });
 
 // throws an Error that has `code: "ERR_RC_CONFIG_EXTENSION_NOT_ALLOWED"` for `config.js`
