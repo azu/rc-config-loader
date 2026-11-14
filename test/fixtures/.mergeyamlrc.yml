@@ -1,0 +1,6 @@
+base: &base
+  foo: 1
+config:
+  <<: *base
+  bar: 2
+date: 2020-01-01
