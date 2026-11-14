@@ -22,7 +22,6 @@
   "license": "MIT",
   "author": "azu",
   "files": [
-    "bin/",
     "lib/",
     "src/"
   ],
