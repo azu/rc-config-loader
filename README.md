@@ -1,6 +1,6 @@
 # rc-config-loader [![Actions Status: test](https://github.com/azu/rc-config-loader/workflows/test/badge.svg)](https://github.com/azu/rc-config-loader/actions?query=workflow%3A"test")
 
-Load config from `.{product}rc.{json,yml,js}` file.
+Load config from `.{product}rc.{json,yml,js,ts}` file.
 
 It is a Node.js library for loading `.textlintrc`, `.eslintrc`, `.stylelintrc` etc...
 
@@ -9,8 +9,11 @@ It is a Node.js library for loading `.textlintrc`, `.eslintrc`, `.stylelintrc` e
 Find and load a configuration object from:
 
 - a `package.json` property if it is needed
-- a JSON or YAML, JS "rc file"
+- a JSON or YAML, JS, TypeScript "rc file"
     - `.<product>rc` or `.<product>rc.json` or `.<product>rc.js` or`.<product>rc.yml`, `.<product>rc.yaml`
+    - `.<product>rc.cjs`, `.<product>rc.mjs`
+    - `.<product>rc.ts`, `.<product>rc.cts`, `.<product>rc.mts`
+- CommonJS and ES Modules config file
 - TypeScript support
     - Includes `.d.ts`
 
@@ -30,6 +33,12 @@ Find and load a configuration object from:
     - [comisconfig@6*](https://github.com/davidtheclark/cosmiconfig/blob/master/CHANGELOG.md#600) is written by TypeScript
 
 If you want to async support and customize loader, recommended to use [cosmiconfig](https://github.com/davidtheclark/cosmiconfig).
+
+## Requirements
+
+- Node.js 22.18.0 or later
+    - TypeScript config file uses Node.js's built-in [type stripping](https://nodejs.org/api/typescript.html#type-stripping)
+    - ES Modules config file uses Node.js's [`require(esm)`](https://nodejs.org/api/modules.html#loading-ecmascript-modules-using-require)
 
 ## Install
 
@@ -109,6 +118,9 @@ It will check these files and return config file if found it.
 - `.your-applicationrc.yml`
 - `.your-applicationrc.yaml`
 - `.your-applicationrc.js`
+- `.your-applicationrc.mjs`
+- `.your-applicationrc.ts`
+- and other supported extensions
 - [optional] `package.json`
   - if `packageJSON` option is enabled
 
@@ -133,7 +145,8 @@ export declare function loadConfigFile<R extends {}>(filePath: string, opts?: lo
 - The loader is selected by the extension of `filePath`
     - `.json` → JSON(JSON5)
     - `.yaml` or `.yml` → YAML
-    - `.js` or `.cjs` → JavaScript
+    - `.js`, `.cjs`, or `.mjs` → JavaScript
+    - `.ts`, `.cts`, or `.mts` → TypeScript
     - Other names like `.your-applicationrc` are tried as JSON, YAML, then JavaScript
 - It returns `{ config, filePath }`, and `filePath` is the absolute path to the config file
 
@@ -159,6 +172,33 @@ function loadConfigFromOption(configFilePath) {
 // load ./config/your-application.json, not ../config/your-application.json
 const config = loadConfigFromOption("config/your-application.json");
 ```
+
+### JavaScript and TypeScript config file
+
+JavaScript and TypeScript config files are loaded by Node.js's `require()`.
+
+- CommonJS: `module.exports` is the config
+- ES Modules: `export default` is the config
+- TypeScript: Node.js strips the types, and then loads it as CommonJS or ES Modules
+
+```ts
+// .your-applicationrc.ts
+type Config = {
+    rules: Record<string, boolean>;
+};
+const config: Config = {
+    rules: {
+        a: true
+    }
+};
+export default config;
+```
+
+**Limitations:**
+
+- ES Modules config file can not use top-level `await`, because `require(esm)` loads only synchronous modules
+- TypeScript config file can use only [erasable syntax](https://nodejs.org/api/typescript.html#typescript-features). For example, `enum` is not supported, and `tsconfig.json` is not read
+- Node.js caches ES Modules. If an ES Modules config file is changed in the same process, the changed content is not loaded
 
 ### Example
 

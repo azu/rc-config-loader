@@ -1,8 +1,10 @@
 import assert from "assert";
+import fs from "fs";
+import os from "os";
 import path from "path";
-import { loadConfigFile } from "../src/rc-config-loader";
+import { loadConfigFile } from "../lib/rc-config-loader.js";
 
-const fixturesDir = path.join(__dirname, "fixtures/load-config-file");
+const fixturesDir = path.join(import.meta.dirname, "fixtures/load-config-file");
 
 const assertNotFound = (fn: () => unknown, filePath: string) => {
     assert.throws(fn, (error: NodeJS.ErrnoException) => {
@@ -19,7 +21,11 @@ describe("loadConfigFile", () => {
             ["rc.yaml", "yaml"],
             ["rc.yml", "yml"],
             ["rc.js", "js"],
-            ["rc.cjs", "cjs"]
+            ["rc.cjs", "cjs"],
+            ["rc.mjs", "mjs"],
+            ["esm.js", "esm-js"],
+            ["rc.ts", "ts"],
+            ["rc.cts", "cts"]
         ];
         cases.forEach(([fileName, type]) => {
             it(`should load ${fileName}`, () => {
@@ -27,6 +33,39 @@ describe("loadConfigFile", () => {
                 assert.deepStrictEqual(config, { type });
                 assert.strictEqual(filePath, path.join(fixturesDir, fileName));
             });
+        });
+    });
+
+    describe("ES Modules and TypeScript", () => {
+        it("should load .mts that imports other module", () => {
+            const { config } = loadConfigFile("rc.mts", { cwd: fixturesDir });
+            assert.deepStrictEqual(config, { type: "mts", shared: 42 });
+        });
+        it("should throw an error if ES Module uses top-level await", () => {
+            const filePath = path.join(fixturesDir, "top-level-await.mjs");
+            assert.throws(() => loadConfigFile("top-level-await.mjs", { cwd: fixturesDir }), {
+                code: "ERR_REQUIRE_ASYNC_MODULE",
+                message: new RegExp(`^Cannot read config file: ${escapeRegExp(filePath)}`)
+            });
+        });
+        it("should throw an error if TypeScript uses syntax that requires transformation", () => {
+            const filePath = path.join(fixturesDir, "enum.ts");
+            assert.throws(() => loadConfigFile("enum.ts", { cwd: fixturesDir }), {
+                code: "ERR_UNSUPPORTED_TYPESCRIPT_SYNTAX",
+                message: new RegExp(`^Cannot read config file: ${escapeRegExp(filePath)}`)
+            });
+        });
+        it("should load the latest content of CommonJS config file", () => {
+            const tmpDir = fs.mkdtempSync(path.join(os.tmpdir(), "rc-config-loader-"));
+            try {
+                const filePath = path.join(tmpDir, "rc.cjs");
+                fs.writeFileSync(filePath, "module.exports = { version: 1 };");
+                assert.deepStrictEqual(loadConfigFile(filePath).config, { version: 1 });
+                fs.writeFileSync(filePath, "module.exports = { version: 2 };");
+                assert.deepStrictEqual(loadConfigFile(filePath).config, { version: 2 });
+            } finally {
+                fs.rmSync(tmpDir, { recursive: true, force: true });
+            }
         });
     });
 
