@@ -28,7 +28,7 @@
 2. `path.resolve(cwd, filePath)`で絶対パスにします。`cwd`の既定値は`process.cwd()`です。
 3. `fs.existsSync`でファイルがなければ、`code = "ENOENT"`と`path`を付けたエラーを投げます。呼び出し側がファイルの有無を`code`で判定できるように、Node.jsのファイル操作のエラーと同じ`code`にしています。
 4. `path.extname`の拡張子が`defaultLoaderByExt`にあれば、`allowedExtensions`に含まれるかを確かめます。含まれなければ、`createNotAllowedError`で`code = "ERR_RC_CONFIG_EXTENSION_NOT_ALLOWED"`と`path`を付けたエラーを投げます。含まれれば、そのローダーを`suppress = false`で呼び、結果を返します。
-5. 拡張子が表にないか、拡張子がない場合は、試すローダーの配列を作ります。`allowedExtensions`に`.json`があればJSON、`.yaml`か`.yml`があればYAML、`.js`があればJavaScriptを、この順に入れます。配列が空なら、4と同じエラーを投げます。
+5. 拡張子が表にないか、拡張子がない場合は、試すローダーの配列を作ります。`rcFile`と同じ`selectLoadersForNoExtension`で、`allowedExtensions`の順に、`.json`ならJSON、`.yaml`か`.yml`ならYAML、`.js`ならJavaScriptのローダーを入れます。配列が空なら、4と同じエラーを投げます。
 6. 配列の最後以外のローダーを`suppress = true`で順に呼び、`undefined`以外を返した最初の結果を返します。どれも読めなければ、最後のローダーを`suppress = false`で呼び、その結果を返すか、そのエラーを投げます。
 
 最後のローダーだけを`suppress = false`で呼ぶため、どの形式でも読めないときは最後に試した形式のエラーが利用者に届きます。`extensions`を省略したときはJavaScriptのエラーです。

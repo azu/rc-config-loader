@@ -26,38 +26,36 @@
 
 ### 1. オプションを決める
 
-`configFileName`、`defaultExtension`、`cwd`、`packageJSON`を、省略されていれば既定値で補います。
+削除した`defaultExtension`がオプションにあれば、`defaultExtension option is removed. Use extensions option instead.`のエラーを投げます。値が`undefined`でも、キーがあれば投げます。
+`configFileName`、`cwd`、`packageJSON`を、省略されていれば既定値で補います。
 `packageJSON`がオブジェクトなら`fieldName`を、そうでなければ`pkgName`をフィールド名にします。
 
 ### 2. 探す拡張子を決める
 
 `resolveAllowedExtensions`で、探してよい拡張子の配列（`allowedExtensions`）を決めます。
-`extensions`を省略したときは`defaultLoaderByExt`のすべてのキーを表の順に、指定したときはその配列を返します。
+`extensions`を省略したときは既定値`defaultExtensions`（`[".json", ".yaml", ".yml", ".js", ".cjs", ".mjs", ".ts", ".cts", ".mts"]`）を、指定したときはその配列を返します。
 指定した配列が空なら`extensions should be a non-empty array.`、表にない拡張子を含むなら`<拡張子> is not supported.`のエラーを投げます。
-
-`defaultExtension`を省略したときは、既定値`[".json", ".yaml", ".yml", ".js", ".cjs"]`から`allowedExtensions`に含まれるものだけを残します。
-`extensions`を省略したときは`allowedExtensions`がすべての拡張子なので、既定値はそのまま残ります。
 
 ### 3. 拡張子のない候補のローダーを決める
 
-`defaultExtension`の各拡張子を`selectLoader`でローダーに変えます。
-`selectLoader`は、共通の表`defaultLoaderByExt`にない拡張子に`<拡張子> is not supported.`のエラーを投げます。
-続けて、`allowedExtensions`に含まれない拡張子に`<拡張子> in defaultExtension is not included in extensions.`のエラーを投げます。
-`defaultExtension`が配列ならローダーの配列（`loadersByOrder`）、1つならローダー1つになります。
+`selectLoadersForNoExtension`が、`allowedExtensions`の順に、`.json`ならJSON、`.yaml`か`.yml`ならYAML、`.js`ならJavaScriptのローダーを集めます。
+ほかの拡張子はローダーを足しません。拡張子のないファイルは、Node.jsの型の除去の対象にならないためです。
+同じローダーは2回入れません。`.yaml`と`.yml`の両方があってもYAMLは1回だけ試し、JavaScriptのファイルを2回実行しません。
+集めたローダーが1つならローダー1つ、それ以外ならローダーの配列を`loadersByOrder`にします。
 
 探索の表`loaderByExt`は、`allowedExtensions`の順に各拡張子のローダーを入れ、最後に空文字列の拡張子として`loadersByOrder`を加えたものです。
-`loadersByOrder`が空の配列なら、空文字列の拡張子は加えません。
+集めたローダーが0個なら、空文字列の拡張子は加えません。
 
 ### 4. ディレクトリごとに候補を確かめる
 
 `cwd`を`path.resolve`で絶対パスにし、区切り文字で分けた配列`parts`にします。
 `findConfig`は`loaderByExt`のキーの順に、`parts`のディレクトリへ`configFileName + 拡張子`を`path.resolve`で結合した場所を確かめます。
-キーの順は表を作った順です。`extensions`を省略したときは`.cjs`、`.js`、`.mjs`、`.json`、`.yaml`、`.yml`、`.ts`、`.cts`、`.mts`、空文字列です。
+キーの順は表を作った順です。`extensions`を省略したときは`.json`、`.yaml`、`.yml`、`.js`、`.cjs`、`.mjs`、`.ts`、`.cts`、`.mts`、空文字列です。
 `path.resolve`で結合するため、`configFileName`が絶対パスならディレクトリは無視されます。
 
 ファイルが`fs.existsSync`で見つかったら、次のように読みます。
 
-- ローダーが1つ（拡張子付きの候補、または`defaultExtension`が1つ）なら、`suppress = false`で読みます。読めなければエラーが投げられます。
+- ローダーが1つ（拡張子付きの候補、または拡張子のない候補で試す形式が1つ）なら、`suppress = false`で読みます。読めなければエラーが投げられます。
 - ローダーが配列なら、順に`suppress = true`で読み、最初に値を返したローダーの結果を使います。どれも`undefined`を返したら、この候補を飛ばします。
 
 どちらの場合も、読んだ値が偽（falsy）なら次の候補へ進みます。
@@ -97,7 +95,7 @@ sequenceDiagram
 
 ## データモデル・ER 図
 
-`rcConfigLoaderOption`（`packageJSON`、`configFileName`、`defaultExtension`、`cwd`、`extensions`）と、戻り値の`rcConfigResult`（`config`、`filePath`）を`src/types.ts`で定義しています。
+`rcConfigLoaderOption`（`packageJSON`、`configFileName`、`cwd`、`extensions`）と、戻り値の`rcConfigResult`（`config`、`filePath`）を`src/types.ts`で定義しています。
 
 ## API・インターフェース
 
@@ -138,12 +136,21 @@ READMEのAPIの節が利用者向けの説明です。
 
 ### `extensions`を省略したときも既定で絞る
 
-TypeScriptとECMAScript Modulesの対応で探す拡張子が増えるため、既定で絞る案もありました。既存のツールの振る舞いを変えないため、省略時はすべての拡張子を探すことにしました。
+TypeScriptとECMAScript Modulesの対応で探す拡張子が増えるため、既定で絞る案もありました。既存のツールが読める設定ファイルを減らさないため、省略時はすべての拡張子を探すことにしました。
 
-### `defaultExtension`の意味を広げて、探す拡張子も表す
+### `defaultExtension`を残し、`extensions`と並べる
 
-`defaultExtension`は拡張子のない候補をどの形式で試すかを表すため、意味を変えずに残し、探す拡張子は別のオプション`extensions`にしました。
-`defaultExtension`を省略したときに`extensions`で既定値を絞るのは、`extensions`だけを指定すれば指定していない形式が読まれないようにするためです。
+最初の案では、拡張子のない候補の形式を表す`defaultExtension`を残し、探す拡張子を別の`extensions`にしました。
+2つのオプションの違いが分かりにくいため、`extensions`に一本化し、`defaultExtension`は削除しました（メジャーリリース）。
+textlintとsecretlintは`defaultExtension`を指定していません。
+指定されたときに黙って無視せず、エラーにして移行先を示します。
+
+### 既定の優先順を`.cjs`、`.js`から始める
+
+一本化の前は、拡張子付きの候補を`.cjs`、`.js`、`.json`、`.yaml`、`.yml`の順に確かめていました。
+この順を既定値にすると、拡張子のない候補もJavaScriptから試すことになります。
+そのため、拡張子のない候補の既定の順（JSON、YAML、JavaScript）に合わせ、`.json`から始まる順を既定値にしました。
+同じディレクトリに`.foorc.cjs`と`.foorc.json`があると、以前は`.cjs`、今は`.json`が選ばれます。
 
 ## 未決事項
 

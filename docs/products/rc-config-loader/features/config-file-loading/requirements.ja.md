@@ -148,7 +148,7 @@ Scenario: 拡張子のないファイルに試せる形式がない場合、エ�
 
 - `filePath`: 設定ファイルのパス。絶対パスか、`cwd`からの相対パス
 - `cwd`: 相対パスを解決する起点。省略時は現在のディレクトリ
-- `extensions`: 読んでよい拡張子。省略時は[設定ファイルの形式](../config-formats/requirements.ja.md#拡張子と形式の対応)の表にあるすべての拡張子
+- `extensions`: 読んでよい拡張子。省略時は`[".json", ".yaml", ".yml", ".js", ".cjs", ".mjs", ".ts", ".cts", ".mts"]`
 
 **出力:** `{ config, filePath }`。`filePath`は読んだファイルの絶対パスです。
 
@@ -162,12 +162,10 @@ Scenario: 拡張子のないファイルに試せる形式がない場合、エ�
 ##### 形式の選び方
 
 拡張子が[設定ファイルの形式](../config-formats/requirements.ja.md#拡張子と形式の対応)の表にあれば、その形式で読みます。
-表にない拡張子と拡張子のない名前は、JSON、YAML、JavaScriptの順に試し、最初に読めた形式の設定を返します。
-
-##### `extensions`を指定したとき
-
 拡張子が表にあり、`extensions`に含まれないときは、ファイルを読まずにエラーにします。
-表にない拡張子と拡張子のない名前は、`extensions`に含まれる拡張子の形式だけを試します。JSONは`.json`、YAMLは`.yaml`か`.yml`、JavaScriptは`.js`が含まれるときに試します。
+
+表にない拡張子と拡張子のない名前は、`extensions`に`.json`があればJSON、`.yaml`か`.yml`があればYAML、`.js`があればJavaScriptとして、`extensions`に現れた順に試し、最初に読めた形式の設定を返します。
+既定値では、JSON、YAML、JavaScriptの順です。
 
 #### 例外ケースでの振る舞い
 

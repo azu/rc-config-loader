@@ -148,7 +148,7 @@ None. No metric has been defined.
 
 - `filePath`: the path of the configuration file. An absolute path, or a path relative to `cwd`
 - `cwd`: the directory that a relative path is resolved from. The current directory by default
-- `extensions`: the extensions allowed to load. By default, every extension in the table of [Configuration file formats](../config-formats/requirements.md#extensions-and-formats)
+- `extensions`: the extensions allowed to load. `[".json", ".yaml", ".yml", ".js", ".cjs", ".mjs", ".ts", ".cts", ".mts"]` by default
 
 **Output:** `{ config, filePath }`. `filePath` is the absolute path of the file that was read.
 
@@ -162,12 +162,10 @@ Parent directories are not searched, no extension is added to the name, and `pac
 ##### Choosing the format
 
 When the extension is in the table of [Configuration file formats](../config-formats/requirements.md#extensions-and-formats), the file is read as that format.
-An extension not in the table, and a name without an extension, are tried as JSON, YAML, and then JavaScript, and the configuration of the first format that can read the file is returned.
-
-##### When `extensions` is given
-
 When the extension is in the table but not in `extensions`, an error is thrown without reading the file.
-An extension not in the table, and a name without an extension, are tried only as the formats of the extensions in `extensions`: JSON when `.json` is included, YAML when `.yaml` or `.yml` is included, and JavaScript when `.js` is included.
+
+An extension not in the table, and a name without an extension, are tried as JSON when `extensions` has `.json`, as YAML when it has `.yaml` or `.yml`, and as JavaScript when it has `.js`, in the order these appear in `extensions`, and the configuration of the first format that can read the file is returned.
+By default, the order is JSON, YAML, and then JavaScript.
 
 #### Exceptional behavior
 
