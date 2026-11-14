@@ -4,7 +4,7 @@
 
 ## About this document
 
-rc-config-loader reads configuration files written in JSON, YAML, or JavaScript, and returns them as configuration objects.
+rc-config-loader reads configuration files written in JSON, YAML, JavaScript, or TypeScript, and returns them as configuration objects.
 This document describes which format a file is read as, based on its name, and how each format is read.
 Both [Configuration search](../config-search/requirements.md) and [Specified configuration file loading](../config-file-loading/requirements.md) use these formats.
 The parent Product is [rc-config-loader](../../product.md).
@@ -12,20 +12,22 @@ The parent Product is [rc-config-loader](../../product.md).
 ### Scope
 
 - The mapping from extensions to formats
-- How JSON, YAML, and JavaScript are read
+- How JSON, YAML, JavaScript, and TypeScript are read
+- The Node.js version required to run
 - The error when a file cannot be read
 
 ### Out of scope
 
 - Deciding which file to read, including the order of formats tried for a file without an extension. This is described in [Configuration search](../config-search/requirements.md) and [Specified configuration file loading](../config-file-loading/requirements.md).
 - Validating the content of a configuration. The meaning of the configuration object is decided by the program that uses rc-config-loader.
-- JavaScript written with ECMAScript Modules syntax (such as `export default`), and configuration files written in TypeScript. Neither can be read today ([#22](https://github.com/azu/rc-config-loader/issues/22)).
+- Asynchronous configuration files. ECMAScript Modules that use top-level `await` cannot be read, to keep the API synchronous.
+- Settings of type stripping by `tsconfig.json`, and type checking.
 
 ## User stories
 
 ### Write the configuration in the format I like
 
-As a user of a tool, I want to write the configuration file in JSON, YAML, or JavaScript, whichever I like, so that I can configure the tool in the way that fits my project.
+As a user of a tool, I want to write the configuration file in JSON, YAML, JavaScript, or TypeScript, whichever I like, so that I can configure the tool in the way that fits my project.
 
 **Acceptance criteria:**
 
@@ -59,6 +61,18 @@ Scenario: When the file is JavaScript, the value of `module.exports` is returned
 - When: A program reads the file.
 - Then: `{ foo: 1 }` is returned as the configuration.
 
+Scenario: When the file is ECMAScript Modules, the value of `export default` is returned
+
+- Given: `.foorc.mjs` contains `export default { foo: 1 }`.
+- When: A program reads the file.
+- Then: `{ foo: 1 }` is returned as the configuration. The module namespace object with `default` is not returned.
+
+Scenario: When the file is TypeScript, the value run after removing the types is returned
+
+- Given: `.foorc.ts` contains `const config: Config = { foo: 1 }` with a type annotation, and `export default config`.
+- When: A program reads the file on Node.js 22.18.0 or later.
+- Then: `{ foo: 1 }` is returned as the configuration.
+
 ### Notice a broken configuration file
 
 As a user of a tool, I want to know which file could not be read when a configuration file is broken, so that I know which file to fix.
@@ -76,6 +90,18 @@ Scenario: When a YAML file has more than one document, an error is thrown
 - Given: `.foorc.yml` contains two documents separated by `---`.
 - When: A program reads the file.
 - Then: An error is thrown that says a single document is expected.
+
+Scenario: When ECMAScript Modules use top-level `await`, an error is thrown
+
+- Given: `.foorc.mjs` contains top-level `await`.
+- When: A program reads the file.
+- Then: An error is thrown whose message starts with `Cannot read config file: <absolute path of the file>`.
+
+Scenario: When a TypeScript file uses syntax that cannot run by removing types only, an error is thrown
+
+- Given: `.foorc.ts` contains an `enum`.
+- When: A program reads the file.
+- Then: An error is thrown whose message starts with `Cannot read config file: <absolute path of the file>`.
 
 ## KPIs
 
@@ -99,7 +125,8 @@ None. No metric has been defined.
 | --- | --- |
 | `.json` | JSON |
 | `.yaml`, `.yml` | YAML |
-| `.js`, `.cjs` | JavaScript (CommonJS) |
+| `.js`, `.cjs`, `.mjs` | JavaScript (CommonJS or ECMAScript Modules) |
+| `.ts`, `.cts`, `.mts` | TypeScript |
 
 No format can be mapped to an extension that is not in this table.
 
@@ -115,9 +142,23 @@ A file with more than one document cannot be read.
 
 ##### JavaScript
 
-The file is run as a CommonJS module, and the value of `module.exports` is the configuration.
-`require` in the file is resolved from the location of the file.
-The file is run every time it is read, and it is not kept in the Node.js module cache.
+The file is run as a Node.js module. Node.js decides whether it is CommonJS or ECMAScript Modules from the extension and the `type` of `package.json`.
+The configuration is the value of `module.exports` for CommonJS, and the value of `export default` for ECMAScript Modules.
+`require` and `import` in the file are resolved from the location of the file.
+ECMAScript Modules must be loadable synchronously, and cannot use top-level `await`.
+
+A CommonJS file is run again every time it is read.
+For an ECMAScript Modules file, the content read first is used within the same process, and a changed file is not read again.
+
+##### TypeScript
+
+The types are removed by Node.js's type stripping, and the file is run by the same rules as JavaScript.
+Only syntax that can run by removing types is allowed. `enum` and `namespace` with runtime code cannot be used.
+`tsconfig.json` is not read, and types are not checked.
+
+##### Node.js version
+
+It runs on Node.js 22.18.0 or later, the first 22.x version where type stripping is enabled by default.
 
 #### Exceptional behavior
 
@@ -148,8 +189,8 @@ None. Only local files are read.
 
 ## Security considerations
 
-A JavaScript configuration file runs with the same permissions as the program that reads it.
-Reading a JavaScript configuration file is the same as running the code in the file.
+JavaScript and TypeScript configuration files run with the same permissions as the program that reads them.
+Reading such a configuration file is the same as running the code in the file.
 
 ## Open questions
 

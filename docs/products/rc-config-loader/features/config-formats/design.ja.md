@@ -13,7 +13,7 @@ rc-config-loaderの読み込み処理を変更する人とエージェント。
 
 ### 前提知識
 
-Node.jsのCommonJSモジュールと、YAMLのスキーマの考え方。
+Node.jsのCommonJSとECMAScript Modules、`require(esm)`、型の除去（type stripping）と、YAMLのスキーマの考え方。
 
 ### このドキュメントで扱わないこと
 
@@ -26,7 +26,7 @@ Node.jsのCommonJSモジュールと、YAMLのスキーマの考え方。
 
 | 拡張子 | ローダー |
 | --- | --- |
-| `.cjs`、`.js` | `loadJSConfigFile` |
+| `.cjs`、`.js`、`.mjs`、`.ts`、`.cts`、`.mts` | `loadJSConfigFile` |
 | `.json` | `loadJSONConfigFile` |
 | `.yaml`、`.yml` | `loadYAMLConfigFile` |
 
@@ -51,11 +51,19 @@ js-yaml v5の既定はYAML 1.2の`CORE_SCHEMA`ですが、v4の既定スキー�
 ドキュメントが2個以上なら、`load`で解析し直して、`load`と同じ「1つのドキュメントを期待している」エラーを投げます。
 ドキュメントが1個で値が`null`（`---`だけなど）なら`{}`を返します。
 
-### JavaScript
+### JavaScriptとTypeScript
 
-ファイルを文字列として読み、`require-from-string`でCommonJSのモジュールとしてコンパイルし、`module.exports`を返します。
-ファイルのパスを渡すので、ファイルの中の相対パスの`require`はファイルの場所から解決されます。
-`require`のキャッシュを使わないため、同じファイルを読むたびに中身が実行されます。
+JavaScriptとTypeScriptは同じローダーで読みます。
+`require.resolve`でファイルのパスを解決し、`require.cache`からそのパスを消してから、Node.jsの`require()`で読みます。
+
+- CommonJSのファイルは、キャッシュを消しているため、読むたびに実行し直されます。
+- ECMAScript Modulesは、Node.jsの[`require(esm)`](https://nodejs.org/api/modules.html#loading-ecmascript-modules-using-require)で読みます。Node.jsにはECMAScript Modulesのキャッシュを消す方法がないため、同じプロセスで2回目に読むと最初の内容が返ります。トップレベルの`await`を含むと、Node.jsが`ERR_REQUIRE_ASYNC_MODULE`を投げます。
+- TypeScriptは、Node.jsの[型の除去](https://nodejs.org/api/typescript.html#type-stripping)で読みます。型の除去で実行できない構文は、Node.jsが`ERR_UNSUPPORTED_TYPESCRIPT_SYNTAX`を投げます。
+
+`require(esm)`はモジュールの名前空間オブジェクト（`{ __esModule: true, default: 設定 }`）を返します。
+`interopDefault`は、戻り値が`__esModule`と`default`を持つときに`default`を返し、それ以外はそのまま返します。
+
+Node.jsが投げたエラーも、ほかの形式と同じく`suppress`に従って`Cannot read config file`を付けて投げ直します。
 
 ## アーキテクチャ・シーケンス図
 
@@ -63,7 +71,7 @@ js-yaml v5の既定はYAML 1.2の`CORE_SCHEMA`ですが、v4の既定スキー�
 
 ## データモデル・ER 図
 
-`ExtensionName`は`.cjs | .js | .json | .yaml | .yml`、`Loader`は`(fileName, suppress) => R`、`ExtensionLoaderMap`は`ExtensionName`から`Loader`への表です（`src/types.ts`）。
+`ExtensionName`は`.cjs | .js | .mjs | .json | .yaml | .yml | .ts | .cts | .mts`、`Loader`は`(fileName, suppress) => R`、`ExtensionLoaderMap`は`ExtensionName`から`Loader`への表です（`src/types.ts`）。
 
 ## API・インターフェース
 
@@ -76,7 +84,6 @@ js-yaml v5の既定はYAML 1.2の`CORE_SCHEMA`ですが、v4の既定スキー�
 
 - `json5`: JSONの解析
 - `js-yaml`: YAMLの解析
-- `require-from-string`: JavaScriptの実行
 - `debug`: `DEBUG=rc-config-loader`での読み込み経過の出力
 
 ## データの取り扱い設計
@@ -89,7 +96,7 @@ js-yaml v5の既定はYAML 1.2の`CORE_SCHEMA`ですが、v4の既定スキー�
 
 ## セキュリティ上の留意事項
 
-JavaScriptの設定ファイルは、サンドボックスなしで呼び出し元のプロセスの中で実行されます。
+JavaScriptとTypeScriptの設定ファイルは、サンドボックスなしで呼び出し元のプロセスの中で実行されます。
 
 ## デプロイに関する特記事項
 
@@ -102,9 +109,20 @@ JavaScriptの設定ファイルは、サンドボックスなしで呼び出し�
 以前の実装です。webpackでバンドルできないため、ファイルを読んで解析する方法に変えました（[#25](https://github.com/azu/rc-config-loader/issues/25)）。
 JSON5で解析する理由は、記録がなく不明です。
 
-### JavaScriptを`require`で読む
+### JavaScriptを`require-from-string`で読む
 
-`require-from-string`を選んだ理由と、`require`を検討したかどうかの記録はなく、不明です。
+以前の実装です。ファイルの中身を文字列として`Module._compile()`に渡すだけなので、型の除去が入らず、TypeScriptを読めません。
+Node.jsの`require()`に任せれば、型の除去と`require(esm)`の両方が使えるため、`require()`に変えました（[#35](https://github.com/azu/rc-config-loader/pull/35)）。
+最初に`require-from-string`を選んだ理由の記録はなく、不明です。
+
+### `module.stripTypeScriptTypes()`で型を除いてから実行する
+
+[`module.stripTypeScriptTypes()`](https://nodejs.org/api/module.html#modulestriptypescripttypescode-options)で型を除いた文字列を、`require-from-string`に渡す方法です。
+Node.js 22.13.0からありますが、まだRelease candidateの扱いで、Node.js 22では実行時にExperimentalWarningが出るため採りませんでした。
+
+### 古いNode.jsで分かりやすいエラーを出し、Node.js 20も残す
+
+Node.js 20では型の除去が使えません。Node.js 20を残してTypeScriptのときだけエラーにする方法もありましたが、Node.js 20のサポートは2026-04-30に終わっているため、Node.js 22.18.0以降を必要とするメジャーリリースにしました（[#35](https://github.com/azu/rc-config-loader/pull/35)）。
 
 ## 未決事項
 

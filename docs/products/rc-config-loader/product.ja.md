@@ -5,9 +5,9 @@
 ## 概要
 
 rc-config-loaderは、`.textlintrc`や`.eslintrc`のような`.<名前>rc`の設定ファイルを探して読む、Node.jsのライブラリです。
-JSON、YAML、JavaScriptの設定ファイルと`package.json`のフィールドを読み、設定オブジェクトとファイルの絶対パスを返します。
+JSON、YAML、JavaScript、TypeScriptの設定ファイルと`package.json`のフィールドを読み、設定オブジェクトとファイルの絶対パスを返します。
 APIは同期の関数で、呼び出し側を非同期にせずに設定を読めます。
-npmパッケージとして配布し、TypeScriptの型定義を含みます。
+npmパッケージとして配布し、TypeScriptの型定義を含みます。Node.js 22.18.0以降で動きます。
 
 ## 背景と解決する課題
 
@@ -43,7 +43,7 @@ CLIツールの多くは、利用者がプロジェクトに置いた設定フ�
 ### 1つの名前で複数の形式を読む
 
 - **対象:** CLIツールの作者
-- **内容:** ツールの名前を渡すだけで、`.<名前>rc`のJSON、YAML、JavaScriptの設定ファイルと`package.json`のフィールドを探して読む。
+- **内容:** ツールの名前を渡すだけで、`.<名前>rc`のJSON、YAML、JavaScript、TypeScriptの設定ファイルと`package.json`のフィールドを探して読む。
 - **提供理由:** 利用者はプロジェクトに合った形式で設定を書き、作者は形式ごとの処理を持たずに済みます。
 
 ### 読めなかったファイルが分かるエラー
@@ -67,7 +67,7 @@ CLIツールの多くは、利用者がプロジェクトに置いた設定フ�
 | --- | --- | --- |
 | 設定ファイルの探索 | ツールの名前から`.<名前>rc`を起点から親へ探して読む（`rcFile`） | [Requirements](features/config-search/requirements.ja.md) |
 | 指定した設定ファイルの読み込み | パスで指定した1つのファイルだけを探索なしで読む（`loadConfigFile`） | [Requirements](features/config-file-loading/requirements.ja.md) |
-| 設定ファイルの形式 | JSON、YAML、JavaScriptの設定ファイルを拡張子に応じて読む | [Requirements](features/config-formats/requirements.ja.md) |
+| 設定ファイルの形式 | JSON、YAML、JavaScript、TypeScriptの設定ファイルを拡張子に応じて読む | [Requirements](features/config-formats/requirements.ja.md) |
 
 ## 成功の定義
 

@@ -98,8 +98,8 @@ Scenario: 試す形式を1つだけ指定し、その形式で読めない場合
 Scenario: 対応していない拡張子を指定した場合、エラーになる
 
 - Given: なし。
-- When: ツールが`rcFile("foo", { defaultExtension: ".ts" })`を呼ぶ。
-- Then: `.ts is not supported.`のエラーが投げられる。
+- When: ツールが`rcFile("foo", { defaultExtension: ".toml" })`を呼ぶ。
+- Then: `.toml is not supported.`のエラーが投げられる。
 
 ### 壊れた設定ファイルに気づく
 
@@ -137,7 +137,7 @@ Scenario: 見つかった拡張子付きのファイルが読めない場合、�
 
 ##### 探す候補
 
-各ディレクトリで、`configFileName`に拡張子`.cjs`、`.js`、`.json`、`.yaml`、`.yml`を付けた名前と、拡張子を付けない名前を候補にします。
+各ディレクトリで、`configFileName`に[設定ファイルの形式](../config-formats/requirements.ja.md#拡張子と形式の対応)の表にあるすべての拡張子を付けた名前と、拡張子を付けない名前を候補にします。
 拡張子を付けた候補を、拡張子を付けない候補より先に確かめます。
 拡張子を付けた候補は、その拡張子の形式で読みます。
 拡張子を付けない候補は、`defaultExtension`の順に形式を試します。
@@ -176,7 +176,7 @@ Scenario: 見つかった拡張子付きのファイルが読めない場合、�
 
 ##### 対応していない拡張子
 
-`defaultExtension`に`.cjs`、`.js`、`.json`、`.yaml`、`.yml`以外を含むと、`<拡張子> is not supported.`のエラーを投げます。
+`defaultExtension`に[設定ファイルの形式](../config-formats/requirements.ja.md#拡張子と形式の対応)の表にない拡張子を含むと、`<拡張子> is not supported.`のエラーを投げます。
 
 ##### package.jsonが読めない
 
@@ -204,14 +204,14 @@ Scenario: 見つかった拡張子付きのファイルが読めない場合、�
 ## セキュリティ上の留意事項
 
 起点から親へさかのぼるため、プロジェクトの外にある親ディレクトリの設定ファイルも読まれることがあります。
-JavaScriptの設定ファイルを見つけると、そのコードを実行します。
+JavaScriptとTypeScriptの設定ファイルを見つけると、そのコードを実行します。
 
 ## 未決事項
 
 ### 拡張子を付けた候補を確かめる順序（未確認）
 
 - **確認したいこと:** 同じディレクトリに複数の拡張子の候補があるとき、どれを優先するのが意図した振る舞いか。
-- **候補と根拠:** READMEは`.json`、`.yml`、`.yaml`、`.js`の順に候補を挙げ、`.cjs`を含めていません。`src/rc-config-loader.ts`は`.cjs`、`.js`、`.json`、`.yaml`、`.yml`の順に確かめ、`.foorc.cjs`と`.foorc.json`が両方あれば`.foorc.cjs`を返します。この順序を確かめるテストはありません。
+- **候補と根拠:** READMEは`.json`、`.yml`、`.yaml`、`.js`の順に候補を挙げ、`.cjs`を含めていません。`src/rc-config-loader.ts`は`.cjs`、`.js`、`.mjs`、`.json`、`.yaml`、`.yml`、`.ts`、`.cts`、`.mts`の順に確かめ、`.foorc.cjs`と`.foorc.json`が両方あれば`.foorc.cjs`を返します。この順序を確かめるテストはありません。
 - **決まるまでの扱い:** 本文には拡張子付きの候補どうしの順序を書きません。
 - **判断する人:** azu
 

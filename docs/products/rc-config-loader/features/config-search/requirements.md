@@ -98,8 +98,8 @@ Scenario: When only one format is given and the file cannot be read as it, an er
 Scenario: When an unsupported extension is given, an error is thrown
 
 - Given: Nothing.
-- When: The tool calls `rcFile("foo", { defaultExtension: ".ts" })`.
-- Then: The error `.ts is not supported.` is thrown.
+- When: The tool calls `rcFile("foo", { defaultExtension: ".toml" })`.
+- Then: The error `.toml is not supported.` is thrown.
 
 ### Notice a broken configuration file
 
@@ -137,7 +137,7 @@ None. No metric has been defined.
 
 ##### Candidates
 
-In each directory, the candidates are `configFileName` with the extensions `.cjs`, `.js`, `.json`, `.yaml`, and `.yml`, and `configFileName` without an extension.
+In each directory, the candidates are `configFileName` with every extension in the table of [Configuration file formats](../config-formats/requirements.md#extensions-and-formats), and `configFileName` without an extension.
 The candidates with an extension are checked before the candidate without one.
 A candidate with an extension is read as the format of that extension.
 For the candidate without an extension, the formats are tried in the order of `defaultExtension`.
@@ -176,7 +176,7 @@ For the case where `defaultExtension` is an array, see the open questions.
 
 ##### Unsupported extension
 
-When `defaultExtension` includes anything other than `.cjs`, `.js`, `.json`, `.yaml`, and `.yml`, the error `<extension> is not supported.` is thrown.
+When `defaultExtension` includes an extension that is not in the table of [Configuration file formats](../config-formats/requirements.md#extensions-and-formats), the error `<extension> is not supported.` is thrown.
 
 ##### package.json cannot be read
 
@@ -204,14 +204,14 @@ None. Only the local file system is read.
 ## Security considerations
 
 Because the search goes up to the parents, a configuration file in a parent directory outside the project can be read.
-When a JavaScript configuration file is found, its code is run.
+When a JavaScript or TypeScript configuration file is found, its code is run.
 
 ## Open questions
 
 ### Order of the candidates with an extension (unconfirmed)
 
 - **To confirm:** When a directory has candidates with several extensions, which one is intended to win.
-- **Candidates and sources:** The README lists the candidates in the order `.json`, `.yml`, `.yaml`, `.js`, and does not include `.cjs`. `src/rc-config-loader.ts` checks them in the order `.cjs`, `.js`, `.json`, `.yaml`, `.yml`, and returns `.foorc.cjs` when both `.foorc.cjs` and `.foorc.json` exist. No test checks this order.
+- **Candidates and sources:** The README lists the candidates in the order `.json`, `.yml`, `.yaml`, `.js`, and does not include `.cjs`. `src/rc-config-loader.ts` checks them in the order `.cjs`, `.js`, `.mjs`, `.json`, `.yaml`, `.yml`, `.ts`, `.cts`, `.mts`, and returns `.foorc.cjs` when both `.foorc.cjs` and `.foorc.json` exist. No test checks this order.
 - **Until decided:** The body does not state the order among the candidates with an extension.
 - **Decided by:** azu
 
