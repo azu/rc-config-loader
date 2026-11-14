@@ -33,7 +33,7 @@
 ### 2. 探す拡張子を決める
 
 `resolveAllowedExtensions`で、探してよい拡張子の配列（`allowedExtensions`）を決めます。
-`extensions`を省略したときは既定値`defaultExtensions`（`[".json", ".yaml", ".yml", ".js", ".cjs", ".mjs", ".ts", ".cts", ".mts"]`）を、指定したときはその配列を返します。
+`extensions`を省略したときは探索の既定値`defaultSearchExtensions`（`[".json", ".yaml", ".yml", ".js", ".ts"]`）を、指定したときはその配列を返します。
 指定した配列が空なら`extensions should be a non-empty array.`、表にない拡張子を含むなら`<拡張子> is not supported.`のエラーを投げます。
 
 ### 3. 拡張子のない候補のローダーを決める
@@ -50,7 +50,7 @@
 
 `cwd`を`path.resolve`で絶対パスにし、区切り文字で分けた配列`parts`にします。
 `findConfig`は`loaderByExt`のキーの順に、`parts`のディレクトリへ`configFileName + 拡張子`を`path.resolve`で結合した場所を確かめます。
-キーの順は表を作った順です。`extensions`を省略したときは`.json`、`.yaml`、`.yml`、`.js`、`.cjs`、`.mjs`、`.ts`、`.cts`、`.mts`、空文字列です。
+キーの順は表を作った順です。`extensions`を省略したときは`.json`、`.yaml`、`.yml`、`.js`、`.ts`、空文字列です。
 `path.resolve`で結合するため、`configFileName`が絶対パスならディレクトリは無視されます。
 
 ファイルが`fs.existsSync`で見つかったら、次のように読みます。
@@ -134,9 +134,12 @@ READMEのAPIの節が利用者向けの説明です。
 親へさかのぼる探索、拡張子付きの候補を先に確かめること、`package.json`を同じディレクトリの候補の後に確かめることについて、検討した代替手段と判断理由の記録はなく、不明です。
 探索は[zkochan/rcfile](https://github.com/zkochan/rcfile)を元にしています。
 
-### `extensions`を省略したときも既定で絞る
+### `extensions`を省略したときはすべての拡張子を探す
 
-TypeScriptとECMAScript Modulesの対応で探す拡張子が増えるため、既定で絞る案もありました。既存のツールが読める設定ファイルを減らさないため、省略時はすべての拡張子を探すことにしました。
+TypeScriptとECMAScript Modulesの対応で探す拡張子が増えます。既存のツールが読める設定ファイルを減らさないよう、既定ですべての拡張子を探す案もありました。
+拡張子が1つ増えるごとに、ディレクトリごとの存在確認が1回増え、見つからないときはルートまでさかのぼります。すべての拡張子を探すと、8階層下のディレクトリから設定のないまま探索したときの確認は150回で、v4の5つの拡張子では90回でした。
+そのため既定値は`.json`、`.yaml`、`.yml`、`.js`、`.ts`に絞り、`.cjs`、`.mjs`、`.cts`、`.mts`は`extensions`で指定したときだけ探すことにしました（メジャーリリース）。
+以前は`.cjs`を既定で探していたので、利用者が`.<name>rc.cjs`（たとえば`.secretlintrc.cjs`や`.textlintrc.cjs`）を使っているツールは、`extensions`に`.cjs`を足さないと見つけられなくなります。
 
 ### `defaultExtension`を残し、`extensions`と並べる
 
@@ -150,7 +153,7 @@ textlintとsecretlintは`defaultExtension`を指定していません。
 一本化の前は、拡張子付きの候補を`.cjs`、`.js`、`.json`、`.yaml`、`.yml`の順に確かめていました。
 この順を既定値にすると、拡張子のない候補もJavaScriptから試すことになります。
 そのため、拡張子のない候補の既定の順（JSON、YAML、JavaScript）に合わせ、`.json`から始まる順を既定値にしました。
-同じディレクトリに`.foorc.cjs`と`.foorc.json`があると、以前は`.cjs`、今は`.json`が選ばれます。
+同じディレクトリに`.foorc.cjs`と`.foorc.json`があると、以前は`.cjs`、今は`.json`が選ばれます。今は`.cjs`を既定では探しません。
 
 ## 未決事項
 

@@ -86,9 +86,15 @@ As a CLI tool author, I want to search only the extensions that my tool accepts,
 
 Scenario: When `extensions` is omitted, JSON is preferred to JavaScript
 
-- Given: The starting directory has `.priorityrc.json` and `.priorityrc.cjs`.
+- Given: The starting directory has `.priorityrc.json` and `.priorityrc.js`.
 - When: The tool calls `rcFile("priority", { cwd: start })`.
 - Then: The configuration of `<start>/.priorityrc.json` is returned.
+
+Scenario: When `extensions` is omitted, `.cjs`, `.mjs`, `.cts`, and `.mts` are not searched
+
+- Given: From the starting directory up through the parents, the only candidate of `.optinrc` is `.optinrc.cjs`.
+- When: The tool calls `rcFile("optin", { cwd: start })`, and then `rcFile("optin", { cwd: start, extensions: [".json", ".cjs"] })`.
+- Then: The former returns `undefined`, and the latter returns the configuration of `<start>/.optinrc.cjs`.
 
 Scenario: When `extensions` is given, only the candidates with those extensions are searched
 
@@ -166,7 +172,7 @@ None. No metric has been defined.
 - `configFileName`: the name of the file to look for. `.<pkgName>rc` by default
 - `cwd`: the starting directory of the search. The current directory by default
 - `packageJSON`: whether to read `package.json`, and the name of the field to read
-- `extensions`: the extensions to search, and their priority. `[".json", ".yaml", ".yml", ".js", ".cjs", ".mjs", ".ts", ".cts", ".mts"]` by default
+- `extensions`: the extensions to search, and their priority. `[".json", ".yaml", ".yml", ".js", ".ts"]` by default. `.cjs`, `.mjs`, `.cts`, and `.mts` are searched only when they are given
 
 **Output:** `{ config, filePath }`. `filePath` is the absolute path of the file that was read. `undefined` when nothing is found.
 

@@ -24,7 +24,7 @@
 `loadConfigFile`は`src/rc-config-loader.ts`にあり、探索の`findConfig`を使わずに1つのファイルを読みます。
 形式ごとのローダーと、拡張子からローダーを引く表`defaultLoaderByExt`は`rcFile`と共有します。
 
-1. `resolveAllowedExtensions`で、読んでよい拡張子（`allowedExtensions`）を決めます。省略時はすべての拡張子です。誤りの扱いは`rcFile`と同じです。
+1. `resolveAllowedExtensions`で、読んでよい拡張子（`allowedExtensions`）を決めます。省略時は、`rcFile`の既定値と違い、表にあるすべての拡張子（`supportedExtensions`）です。誤りの扱いは`rcFile`と同じです。
 2. `path.resolve(cwd, filePath)`で絶対パスにします。`cwd`の既定値は`process.cwd()`です。
 3. `fs.existsSync`でファイルがなければ、`code = "ENOENT"`と`path`を付けたエラーを投げます。呼び出し側がファイルの有無を`code`で判定できるように、Node.jsのファイル操作のエラーと同じ`code`にしています。
 4. `path.extname`の拡張子が`defaultLoaderByExt`にあれば、`allowedExtensions`に含まれるかを確かめます。含まれなければ、`createNotAllowedError`で`code = "ERR_RC_CONFIG_EXTENSION_NOT_ALLOWED"`と`path`を付けたエラーを投げます。含まれれば、そのローダーを`suppress = false`で呼び、結果を返します。
@@ -98,6 +98,11 @@ READMEの「Load exactly one config file」の節が利用者向けの説明で�
 ### `rcFile`にオプションを足す
 
 `rcFile`に探索しないオプションを足す方法は、[#33](https://github.com/azu/rc-config-loader/pull/33)の提案では採らず、別の関数にしました。オプションを足す方法を比べた記録はありません。
+
+### `rcFile`と同じ既定の拡張子を使う
+
+`rcFile`は、存在確認の回数を抑えるため、既定では`.json`、`.yaml`、`.yml`、`.js`、`.ts`だけを探します。
+`loadConfigFile`は指定された1ファイルを読むだけで探索しないので、既定値を絞っても速くなりません。`.secretlintrc.cjs`のように利用者が名指ししたファイルを拒むだけになります。そのため、既定ではすべての拡張子を受け付けます。
 
 ### 許していない拡張子のファイルを`ENOENT`と同じに扱う
 
