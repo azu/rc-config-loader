@@ -29,19 +29,30 @@
 `configFileName`、`defaultExtension`、`cwd`、`packageJSON`を、省略されていれば既定値で補います。
 `packageJSON`がオブジェクトなら`fieldName`を、そうでなければ`pkgName`をフィールド名にします。
 
-### 2. 拡張子のない候補のローダーを決める
+### 2. 探す拡張子を決める
+
+`resolveAllowedExtensions`で、探してよい拡張子の配列（`allowedExtensions`）を決めます。
+`extensions`を省略したときは`defaultLoaderByExt`のすべてのキーを表の順に、指定したときはその配列を返します。
+指定した配列が空なら`extensions should be a non-empty array.`、表にない拡張子を含むなら`<拡張子> is not supported.`のエラーを投げます。
+
+`defaultExtension`を省略したときは、既定値`[".json", ".yaml", ".yml", ".js", ".cjs"]`から`allowedExtensions`に含まれるものだけを残します。
+`extensions`を省略したときは`allowedExtensions`がすべての拡張子なので、既定値はそのまま残ります。
+
+### 3. 拡張子のない候補のローダーを決める
 
 `defaultExtension`の各拡張子を`selectLoader`でローダーに変えます。
 `selectLoader`は、共通の表`defaultLoaderByExt`にない拡張子に`<拡張子> is not supported.`のエラーを投げます。
+続けて、`allowedExtensions`に含まれない拡張子に`<拡張子> in defaultExtension is not included in extensions.`のエラーを投げます。
 `defaultExtension`が配列ならローダーの配列（`loadersByOrder`）、1つならローダー1つになります。
 
-探索の表`loaderByExt`は、拡張子からローダーを引く共通の表`defaultLoaderByExt`に、空文字列の拡張子として`loadersByOrder`を加えたものです。
+探索の表`loaderByExt`は、`allowedExtensions`の順に各拡張子のローダーを入れ、最後に空文字列の拡張子として`loadersByOrder`を加えたものです。
+`loadersByOrder`が空の配列なら、空文字列の拡張子は加えません。
 
-### 3. ディレクトリごとに候補を確かめる
+### 4. ディレクトリごとに候補を確かめる
 
 `cwd`を`path.resolve`で絶対パスにし、区切り文字で分けた配列`parts`にします。
 `findConfig`は`loaderByExt`のキーの順に、`parts`のディレクトリへ`configFileName + 拡張子`を`path.resolve`で結合した場所を確かめます。
-キーの順は表を作った順で、`.cjs`、`.js`、`.mjs`、`.json`、`.yaml`、`.yml`、`.ts`、`.cts`、`.mts`、空文字列です。
+キーの順は表を作った順です。`extensions`を省略したときは`.cjs`、`.js`、`.mjs`、`.json`、`.yaml`、`.yml`、`.ts`、`.cts`、`.mts`、空文字列です。
 `path.resolve`で結合するため、`configFileName`が絶対パスならディレクトリは無視されます。
 
 ファイルが`fs.existsSync`で見つかったら、次のように読みます。
@@ -53,11 +64,11 @@
 
 ローダーが1つの候補を2回読まないようにしています。以前は1つのローダーを配列として扱った結果、同じファイルを2回実行していました。設定ファイルに副作用があると問題になるため直しました（[#4](https://github.com/azu/rc-config-loader/pull/4)）。
 
-### 4. package.jsonを確かめる
+### 5. package.jsonを確かめる
 
 候補がどれも見つからず`packageJSON`が有効なら、同じディレクトリの`package.json`を`JSON5.parse`で読み、フィールドの値が真（truthy）ならそれを返します。
 
-### 5. 親へ移る
+### 6. 親へ移る
 
 `parts`の末尾を取り除いて`findConfig`を呼び直します。
 `parts`が空になったら`undefined`を返します。
@@ -86,7 +97,7 @@ sequenceDiagram
 
 ## データモデル・ER 図
 
-`rcConfigLoaderOption`（`packageJSON`、`configFileName`、`defaultExtension`、`cwd`）と、戻り値の`rcConfigResult`（`config`、`filePath`）を`src/types.ts`で定義しています。
+`rcConfigLoaderOption`（`packageJSON`、`configFileName`、`defaultExtension`、`cwd`、`extensions`）と、戻り値の`rcConfigResult`（`config`、`filePath`）を`src/types.ts`で定義しています。
 
 ## API・インターフェース
 
@@ -114,6 +125,7 @@ READMEのAPIの節が利用者向けの説明です。
 ## セキュリティ上の留意事項
 
 探索はファイルシステムのルートまで進み、途中で止める指定はありません。
+`extensions`を指定すると、指定していない拡張子のファイルは`fs.existsSync`でも確かめないため、読まれることも実行されることもありません。
 
 ## デプロイに関する特記事項
 
@@ -123,6 +135,15 @@ READMEのAPIの節が利用者向けの説明です。
 
 親へさかのぼる探索、拡張子付きの候補を先に確かめること、`package.json`を同じディレクトリの候補の後に確かめることについて、検討した代替手段と判断理由の記録はなく、不明です。
 探索は[zkochan/rcfile](https://github.com/zkochan/rcfile)を元にしています。
+
+### `extensions`を省略したときも既定で絞る
+
+TypeScriptとECMAScript Modulesの対応で探す拡張子が増えるため、既定で絞る案もありました。既存のツールの振る舞いを変えないため、省略時はすべての拡張子を探すことにしました。
+
+### `defaultExtension`の意味を広げて、探す拡張子も表す
+
+`defaultExtension`は拡張子のない候補をどの形式で試すかを表すため、意味を変えずに残し、探す拡張子は別のオプション`extensions`にしました。
+`defaultExtension`を省略したときに`extensions`で既定値を絞るのは、`extensions`だけを指定すれば指定していない形式が読まれないようにするためです。
 
 ## 未決事項
 

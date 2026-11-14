@@ -13,6 +13,7 @@ The parent Product is [rc-config-loader](../../product.md).
 - The names and extensions of the files to look for
 - The search from the starting directory up through the parent directories
 - Loading from a field of `package.json`
+- Limiting the extensions to search
 - What happens when nothing is found, and when a file cannot be read
 
 ### Out of scope
@@ -101,6 +102,48 @@ Scenario: When an unsupported extension is given, an error is thrown
 - When: The tool calls `rcFile("foo", { defaultExtension: ".toml" })`.
 - Then: The error `.toml is not supported.` is thrown.
 
+### Limit the extensions to search
+
+As a CLI tool author, I want to search only the extensions that my tool accepts, so that the tool does not read configuration files in formats it does not expect, especially JavaScript and TypeScript files that are run.
+
+**Acceptance criteria:**
+
+Scenario: When `extensions` is given, only the candidates with those extensions are searched
+
+- Given: The starting directory has `.limitrc.js` and `.limitrc.json`.
+- When: The tool calls `rcFile("limit", { cwd: start, extensions: [".json"] })`.
+- Then: The configuration of `<start>/.limitrc.json` is returned. `.limitrc.js` is not run.
+
+Scenario: The order of `extensions` is the priority of the search
+
+- Given: The starting directory has `.limitrc.js` and `.limitrc.json`.
+- When: The tool calls `rcFile("limit", { cwd: start, extensions })` with `extensions: [".js", ".json"]` and with `extensions: [".json", ".js"]`.
+- Then: The former returns the configuration of `.limitrc.js`, and the latter returns that of `.limitrc.json`.
+
+Scenario: When only a configuration file of an extension that is not given exists, nothing is found
+
+- Given: From the starting directory up through the parents, the only candidate of `.onlyjsrc` is `.onlyjsrc.js`.
+- When: The tool calls `rcFile("onlyjs", { cwd: start, extensions: [".json", ".yaml", ".yml"] })`.
+- Then: `undefined` is returned.
+
+Scenario: When `extensions` is given and `defaultExtension` is omitted, the candidate without an extension is also tried only as the given formats
+
+- Given: The starting directory has `.noextrc` without an extension, written in JavaScript.
+- When: The tool calls `rcFile("noext", { cwd: start, extensions: [".json"] })`.
+- Then: `.noextrc` is not run as JavaScript, and `undefined` is returned.
+
+Scenario: When `defaultExtension` has an extension that is not in `extensions`, an error is thrown
+
+- Given: Nothing.
+- When: The tool calls `rcFile("noext", { extensions: [".json"], defaultExtension: [".js"] })`.
+- Then: The error `.js in defaultExtension is not included in extensions.` is thrown.
+
+Scenario: When `extensions` is an empty array, an error is thrown
+
+- Given: Nothing.
+- When: The tool calls `rcFile("limit", { extensions: [] })`.
+- Then: The error `extensions should be a non-empty array.` is thrown.
+
 ### Notice a broken configuration file
 
 As a user of a tool, I want an error when a configuration file with an extension is broken, instead of falling back to another configuration, so that the tool does not run with an unintended configuration.
@@ -130,6 +173,7 @@ None. No metric has been defined.
 - `cwd`: the starting directory of the search. The current directory by default
 - `defaultExtension`: the extensions of the formats to try for a file without an extension. One extension or an array. `[".json", ".yaml", ".yml", ".js", ".cjs"]` by default
 - `packageJSON`: whether to read `package.json`, and the name of the field to read
+- `extensions`: the extensions to search, and their priority. By default, every extension in the table of [Configuration file formats](../config-formats/requirements.md#extensions-and-formats)
 
 **Output:** `{ config, filePath }`. `filePath` is the absolute path of the file that was read. `undefined` when nothing is found.
 
@@ -137,10 +181,19 @@ None. No metric has been defined.
 
 ##### Candidates
 
-In each directory, the candidates are `configFileName` with every extension in the table of [Configuration file formats](../config-formats/requirements.md#extensions-and-formats), and `configFileName` without an extension.
+In each directory, the candidates are `configFileName` with extensions, and `configFileName` without an extension.
+When `extensions` is given, only those extensions are added, in the given order.
+When it is omitted, every extension in the table of [Configuration file formats](../config-formats/requirements.md#extensions-and-formats) is added.
 The candidates with an extension are checked before the candidate without one.
 A candidate with an extension is read as the format of that extension.
 For the candidate without an extension, the formats are tried in the order of `defaultExtension`.
+
+##### `extensions` and `defaultExtension`
+
+When `extensions` is given and `defaultExtension` is omitted, only the extensions of the default `defaultExtension` that are in `extensions` are used, in the order of the default.
+When none of them is in `extensions`, the candidate without an extension is not checked.
+When `extensions` is given, no configuration file is read as a format that is not given.
+The field of `package.json` follows `packageJSON`, regardless of `extensions`.
 
 ##### Order of the search
 
@@ -178,6 +231,12 @@ For the case where `defaultExtension` is an array, see the open questions.
 
 When `defaultExtension` includes an extension that is not in the table of [Configuration file formats](../config-formats/requirements.md#extensions-and-formats), the error `<extension> is not supported.` is thrown.
 
+##### Invalid `extensions`
+
+When `extensions` is an empty array, the error `extensions should be a non-empty array.` is thrown.
+When it includes an extension that is not in the table, the error `<extension> is not supported.` is thrown.
+When `defaultExtension` has an extension that is not in `extensions`, the error `<extension> in defaultExtension is not included in extensions.` is thrown.
+
 ##### package.json cannot be read
 
 When `packageJSON` is enabled and `package.json` cannot be parsed as JSON5, the parse error is thrown as it is.
@@ -205,6 +264,7 @@ None. Only the local file system is read.
 
 Because the search goes up to the parents, a configuration file in a parent directory outside the project can be read.
 When a JavaScript or TypeScript configuration file is found, its code is run.
+When the JavaScript and TypeScript extensions are left out of `extensions`, such configuration files are not run.
 
 ## Open questions
 

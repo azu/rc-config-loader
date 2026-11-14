@@ -13,6 +13,7 @@
 - 探すファイルの名前と拡張子
 - 起点のディレクトリから親のディレクトリへの探索
 - `package.json`のフィールドからの読み込み
+- 探す拡張子を絞ること
 - 見つからなかったときと、読めなかったときの扱い
 
 ### スコープ外
@@ -101,6 +102,48 @@ Scenario: 対応していない拡張子を指定した場合、エラーにな�
 - When: ツールが`rcFile("foo", { defaultExtension: ".toml" })`を呼ぶ。
 - Then: `.toml is not supported.`のエラーが投げられる。
 
+### 探す拡張子を絞る
+
+CLIツールの作者として、ツールが受け付ける拡張子だけを探したい。それによって、ツールが想定しない形式の設定ファイル、特に実行されるJavaScriptやTypeScriptのファイルを読まずに済む。
+
+**受け入れ条件:**
+
+Scenario: `extensions`を指定した場合、その拡張子の候補だけを探す
+
+- Given: 起点に`.limitrc.js`と`.limitrc.json`がある。
+- When: ツールが`rcFile("limit", { cwd: 起点, extensions: [".json"] })`を呼ぶ。
+- Then: `<起点>/.limitrc.json`の設定が返る。`.limitrc.js`は実行されない。
+
+Scenario: `extensions`の順が、探す優先順になる
+
+- Given: 起点に`.limitrc.js`と`.limitrc.json`がある。
+- When: ツールが`extensions: [".js", ".json"]`と`extensions: [".json", ".js"]`でそれぞれ`rcFile("limit", { cwd: 起点, extensions })`を呼ぶ。
+- Then: 前者は`.limitrc.js`、後者は`.limitrc.json`の設定が返る。
+
+Scenario: 指定していない拡張子の設定ファイルしかない場合、見つからない
+
+- Given: 起点から親まで、`.onlyjsrc`の候補は`.onlyjsrc.js`だけである。
+- When: ツールが`rcFile("onlyjs", { cwd: 起点, extensions: [".json", ".yaml", ".yml"] })`を呼ぶ。
+- Then: `undefined`が返る。
+
+Scenario: `extensions`を指定し`defaultExtension`を省略した場合、拡張子のない候補も指定した形式でだけ試す
+
+- Given: 起点に、JavaScriptで書いた拡張子のない`.noextrc`がある。
+- When: ツールが`rcFile("noext", { cwd: 起点, extensions: [".json"] })`を呼ぶ。
+- Then: `.noextrc`はJavaScriptとして実行されず、`undefined`が返る。
+
+Scenario: `defaultExtension`に`extensions`にない拡張子を指定した場合、エラーになる
+
+- Given: なし。
+- When: ツールが`rcFile("noext", { extensions: [".json"], defaultExtension: [".js"] })`を呼ぶ。
+- Then: `.js in defaultExtension is not included in extensions.`のエラーが投げられる。
+
+Scenario: `extensions`が空の配列の場合、エラーになる
+
+- Given: なし。
+- When: ツールが`rcFile("limit", { extensions: [] })`を呼ぶ。
+- Then: `extensions should be a non-empty array.`のエラーが投げられる。
+
 ### 壊れた設定ファイルに気づく
 
 ツールの利用者として、拡張子の付いた設定ファイルが壊れているときに、ほかの設定へ切り替わらずにエラーで知りたい。それによって、意図しない設定でツールが動くことを防げる。
@@ -130,6 +173,7 @@ Scenario: 見つかった拡張子付きのファイルが読めない場合、�
 - `cwd`: 探索の起点。省略時は現在のディレクトリ
 - `defaultExtension`: 拡張子のないファイルを試す形式の拡張子。1つか配列。省略時は`[".json", ".yaml", ".yml", ".js", ".cjs"]`
 - `packageJSON`: `package.json`を読むかどうかと、読むフィールドの名前
+- `extensions`: 探す拡張子と、その優先順。省略時は[設定ファイルの形式](../config-formats/requirements.ja.md#拡張子と形式の対応)の表にあるすべての拡張子
 
 **出力:** `{ config, filePath }`。`filePath`は読んだファイルの絶対パスです。見つからなければ`undefined`です。
 
@@ -137,10 +181,19 @@ Scenario: 見つかった拡張子付きのファイルが読めない場合、�
 
 ##### 探す候補
 
-各ディレクトリで、`configFileName`に[設定ファイルの形式](../config-formats/requirements.ja.md#拡張子と形式の対応)の表にあるすべての拡張子を付けた名前と、拡張子を付けない名前を候補にします。
+各ディレクトリで、`configFileName`に拡張子を付けた名前と、拡張子を付けない名前を候補にします。
+`extensions`を指定したときは、その拡張子だけを、指定した順に付けます。
+省略したときは、[設定ファイルの形式](../config-formats/requirements.ja.md#拡張子と形式の対応)の表にあるすべての拡張子を付けます。
 拡張子を付けた候補を、拡張子を付けない候補より先に確かめます。
 拡張子を付けた候補は、その拡張子の形式で読みます。
 拡張子を付けない候補は、`defaultExtension`の順に形式を試します。
+
+##### `extensions`と`defaultExtension`
+
+`extensions`を指定し`defaultExtension`を省略したときは、`defaultExtension`の既定値のうち`extensions`に含まれる拡張子だけを、既定値の順に使います。
+含まれる拡張子が1つもなければ、拡張子を付けない候補は確かめません。
+`extensions`を指定すると、指定していない形式で設定ファイルが読まれることはありません。
+`package.json`のフィールドは、`extensions`に関係なく`packageJSON`の指定に従います。
 
 ##### 探す順序
 
@@ -178,6 +231,12 @@ Scenario: 見つかった拡張子付きのファイルが読めない場合、�
 
 `defaultExtension`に[設定ファイルの形式](../config-formats/requirements.ja.md#拡張子と形式の対応)の表にない拡張子を含むと、`<拡張子> is not supported.`のエラーを投げます。
 
+##### `extensions`の誤り
+
+`extensions`が空の配列なら、`extensions should be a non-empty array.`のエラーを投げます。
+表にない拡張子を含むなら、`<拡張子> is not supported.`のエラーを投げます。
+`defaultExtension`に`extensions`にない拡張子を指定したときは、`<拡張子> in defaultExtension is not included in extensions.`のエラーを投げます。
+
 ##### package.jsonが読めない
 
 `packageJSON`が有効で、`package.json`をJSON5として解析できないときは、解析のエラーをそのまま投げます。
@@ -205,6 +264,7 @@ Scenario: 見つかった拡張子付きのファイルが読めない場合、�
 
 起点から親へさかのぼるため、プロジェクトの外にある親ディレクトリの設定ファイルも読まれることがあります。
 JavaScriptとTypeScriptの設定ファイルを見つけると、そのコードを実行します。
+`extensions`からJavaScriptとTypeScriptの拡張子を除くと、それらの設定ファイルは実行されません。
 
 ## 未決事項
 

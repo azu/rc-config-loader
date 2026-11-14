@@ -24,13 +24,14 @@
 `loadConfigFile`は`src/rc-config-loader.ts`にあり、探索の`findConfig`を使わずに1つのファイルを読みます。
 形式ごとのローダーと、拡張子からローダーを引く表`defaultLoaderByExt`は`rcFile`と共有します。
 
-1. `path.resolve(cwd, filePath)`で絶対パスにします。`cwd`の既定値は`process.cwd()`です。
-2. `fs.existsSync`でファイルがなければ、`code = "ENOENT"`と`path`を付けたエラーを投げます。呼び出し側がファイルの有無を`code`で判定できるように、Node.jsのファイル操作のエラーと同じ`code`にしています。
-3. `path.extname`の拡張子が`defaultLoaderByExt`にあれば、そのローダーを`suppress = false`で呼び、結果を返します。
-4. 拡張子が表にないか、拡張子がない場合は、JSONとYAMLのローダーを`suppress = true`で順に呼び、`undefined`以外を返した最初の結果を返します。
-5. どちらでも読めなければ、JavaScriptのローダーを`suppress = false`で呼びます。読めなければ、そのエラーが投げられます。
+1. `resolveAllowedExtensions`で、読んでよい拡張子（`allowedExtensions`）を決めます。省略時はすべての拡張子です。誤りの扱いは`rcFile`と同じです。
+2. `path.resolve(cwd, filePath)`で絶対パスにします。`cwd`の既定値は`process.cwd()`です。
+3. `fs.existsSync`でファイルがなければ、`code = "ENOENT"`と`path`を付けたエラーを投げます。呼び出し側がファイルの有無を`code`で判定できるように、Node.jsのファイル操作のエラーと同じ`code`にしています。
+4. `path.extname`の拡張子が`defaultLoaderByExt`にあれば、`allowedExtensions`に含まれるかを確かめます。含まれなければ、`createNotAllowedError`で`code = "ERR_RC_CONFIG_EXTENSION_NOT_ALLOWED"`と`path`を付けたエラーを投げます。含まれれば、そのローダーを`suppress = false`で呼び、結果を返します。
+5. 拡張子が表にないか、拡張子がない場合は、試すローダーの配列を作ります。`allowedExtensions`に`.json`があればJSON、`.yaml`か`.yml`があればYAML、`.js`があればJavaScriptを、この順に入れます。配列が空なら、4と同じエラーを投げます。
+6. 配列の最後以外のローダーを`suppress = true`で順に呼び、`undefined`以外を返した最初の結果を返します。どれも読めなければ、最後のローダーを`suppress = false`で呼び、その結果を返すか、そのエラーを投げます。
 
-最後のJavaScriptだけを`suppress = false`で呼ぶため、どの形式でも読めないときはJavaScriptのエラーが利用者に届きます。
+最後のローダーだけを`suppress = false`で呼ぶため、どの形式でも読めないときは最後に試した形式のエラーが利用者に届きます。`extensions`を省略したときはJavaScriptのエラーです。
 
 `rcFile`の`configFileName`を使わずに別の関数にしたのは、`rcFile`の探索と拡張子の補完を変えずに、探索しない読み方を足すためです。`rcFile`の振る舞いを変えないので、マイナーリリースとして公開しました（[#33](https://github.com/azu/rc-config-loader/pull/33)）。
 
@@ -59,7 +60,7 @@ sequenceDiagram
 
 ## データモデル・ER 図
 
-`loadConfigFileOption`（`cwd`）を`src/types.ts`で定義しています。戻り値は`rcFile`と同じ`rcConfigResult`です。
+`loadConfigFileOption`（`cwd`、`extensions`）を`src/types.ts`で定義しています。戻り値は`rcFile`と同じ`rcConfigResult`です。
 
 ## API・インターフェース
 
@@ -97,6 +98,10 @@ READMEの「Load exactly one config file」の節が利用者向けの説明で�
 ### `rcFile`にオプションを足す
 
 `rcFile`に探索しないオプションを足す方法は、[#33](https://github.com/azu/rc-config-loader/pull/33)の提案では採らず、別の関数にしました。オプションを足す方法を比べた記録はありません。
+
+### 許していない拡張子のファイルを`ENOENT`と同じに扱う
+
+許していない拡張子を「見つからない」として扱う案もありました。利用者が指定したファイルはあるので、ツールが「その形式は受け付けない」と伝えられるように、別の`code`のエラーにしました。
 
 ## 未決事項
 

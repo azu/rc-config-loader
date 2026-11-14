@@ -14,6 +14,7 @@ The parent Product is [rc-config-loader](../../product.md).
 - Choosing the format by the extension
 - How a file whose format is not decided by the extension is read
 - The errors when the file does not exist and when it cannot be read
+- Limiting the extensions to load
 
 ### Out of scope
 
@@ -103,6 +104,36 @@ Scenario: When the file cannot be read, a `Cannot read config file` error is thr
 - When: The tool calls `loadConfigFile("invalid.json", { cwd: start })`.
 - Then: An error is thrown whose message starts with `Cannot read config file: <start>/invalid.json`.
 
+### Limit the extensions to load
+
+As a CLI tool author, I want to load a file that the user specified only when it has an extension that my tool accepts, so that a JavaScript file is not run by an option such as `--config foo.js`.
+
+**Acceptance criteria:**
+
+Scenario: When the file has a given extension, its configuration is returned
+
+- Given: The starting directory has `rc.json`.
+- When: The tool calls `loadConfigFile("rc.json", { cwd: start, extensions: [".json"] })`.
+- Then: The configuration of `rc.json` is returned.
+
+Scenario: When the file has an extension that is not given, an error is thrown without reading it
+
+- Given: The starting directory has `rc.js`.
+- When: The tool calls `loadConfigFile("rc.js", { cwd: start, extensions: [".json", ".yaml"] })`.
+- Then: `rc.js` is not run, and an error is thrown whose `code` is `ERR_RC_CONFIG_EXTENSION_NOT_ALLOWED` and whose `path` is `<start>/rc.js`.
+
+Scenario: A file without an extension is tried only as the formats of the given extensions
+
+- Given: The starting directory has `.jsrc` without an extension, written in JavaScript.
+- When: The tool calls `loadConfigFile(".jsrc", { cwd: start, extensions: [".json"] })`.
+- Then: `.jsrc` is not run as JavaScript, and a JSON error is thrown whose message starts with `Cannot read config file: <start>/.jsrc`.
+
+Scenario: When no format can be tried for a file without an extension, an error is thrown
+
+- Given: The starting directory has `.jsonrc` without an extension.
+- When: The tool calls `loadConfigFile(".jsonrc", { cwd: start, extensions: [".ts"] })`.
+- Then: An error whose `code` is `ERR_RC_CONFIG_EXTENSION_NOT_ALLOWED` is thrown.
+
 ## KPIs
 
 None. No metric has been defined.
@@ -117,6 +148,7 @@ None. No metric has been defined.
 
 - `filePath`: the path of the configuration file. An absolute path, or a path relative to `cwd`
 - `cwd`: the directory that a relative path is resolved from. The current directory by default
+- `extensions`: the extensions allowed to load. By default, every extension in the table of [Configuration file formats](../config-formats/requirements.md#extensions-and-formats)
 
 **Output:** `{ config, filePath }`. `filePath` is the absolute path of the file that was read.
 
@@ -132,6 +164,11 @@ Parent directories are not searched, no extension is added to the name, and `pac
 When the extension is in the table of [Configuration file formats](../config-formats/requirements.md#extensions-and-formats), the file is read as that format.
 An extension not in the table, and a name without an extension, are tried as JSON, YAML, and then JavaScript, and the configuration of the first format that can read the file is returned.
 
+##### When `extensions` is given
+
+When the extension is in the table but not in `extensions`, an error is thrown without reading the file.
+An extension not in the table, and a name without an extension, are tried only as the formats of the extensions in `extensions`: JSON when `.json` is included, YAML when `.yaml` or `.yml` is included, and JavaScript when `.js` is included.
+
 #### Exceptional behavior
 
 ##### The file does not exist
@@ -144,7 +181,16 @@ The error of [Configuration file formats](../config-formats/requirements.md#the-
 
 ##### The file cannot be read as any format
 
-The error from reading the file as JavaScript is thrown. Its message starts with `Cannot read config file: <absolute path>`.
+The error of the last format tried is thrown. When `extensions` is omitted, it is the JavaScript error. Its message starts with `Cannot read config file: <absolute path>`.
+
+##### Not allowed by `extensions`
+
+An error is thrown with the message `Config file is not allowed by extensions option: <absolute path>`, the `code` `ERR_RC_CONFIG_EXTENSION_NOT_ALLOWED`, and the absolute path as `path`.
+When the file does not exist, the `ENOENT` error comes first.
+
+##### Invalid `extensions`
+
+When `extensions` is an empty array, the error `extensions should be a non-empty array.` is thrown. When it includes an extension that is not in the table, the error `<extension> is not supported.` is thrown.
 
 ## Data requirements
 
@@ -168,6 +214,7 @@ None. Only the local file system is read.
 
 When the content of the specified file is read as JavaScript or TypeScript, its code is run.
 A name without an extension is also run as JavaScript when it cannot be read as JSON or YAML.
+When the JavaScript and TypeScript extensions are left out of `extensions`, the specified file is never run as JavaScript or TypeScript.
 
 ## Open questions
 

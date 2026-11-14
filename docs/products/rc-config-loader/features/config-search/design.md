@@ -29,19 +29,30 @@ Everything is in `src/rc-config-loader.ts`, and only synchronous file operations
 `configFileName`, `defaultExtension`, `cwd`, and `packageJSON` are filled in with the defaults when omitted.
 When `packageJSON` is an object, its `fieldName` is the field name. Otherwise, `pkgName` is the field name.
 
-### 2. Decide the loaders for the candidate without an extension
+### 2. Decide the extensions to search
+
+`resolveAllowedExtensions` decides the array of extensions allowed to search (`allowedExtensions`).
+When `extensions` is omitted, it returns all keys of `defaultLoaderByExt` in the order of the table. When it is given, it returns that array.
+When the given array is empty, it throws `extensions should be a non-empty array.`, and when it includes an extension not in the table, it throws `<extension> is not supported.`.
+
+When `defaultExtension` is omitted, only the extensions of the default `[".json", ".yaml", ".yml", ".js", ".cjs"]` that are in `allowedExtensions` are kept.
+When `extensions` is omitted, `allowedExtensions` has every extension, so the default is kept as it is.
+
+### 3. Decide the loaders for the candidate without an extension
 
 Each extension of `defaultExtension` is turned into a loader with `selectLoader`.
 `selectLoader` throws `<extension> is not supported.` for an extension that is not in the shared table `defaultLoaderByExt`.
+Then, `<extension> in defaultExtension is not included in extensions.` is thrown for an extension that is not in `allowedExtensions`.
 When `defaultExtension` is an array, the result is an array of loaders (`loadersByOrder`). When it is one extension, the result is one loader.
 
-The search table `loaderByExt` is the shared table from extensions to loaders, `defaultLoaderByExt`, with `loadersByOrder` added as the empty-string extension.
+The search table `loaderByExt` has the loader of each extension in the order of `allowedExtensions`, and `loadersByOrder` added last as the empty-string extension.
+When `loadersByOrder` is an empty array, the empty-string extension is not added.
 
-### 3. Check the candidates in each directory
+### 4. Check the candidates in each directory
 
 `cwd` is made absolute with `path.resolve` and split by the separator into the array `parts`.
 `findConfig` checks, in the order of the keys of `loaderByExt`, the location made by joining the directory of `parts` and `configFileName + extension` with `path.resolve`.
-The order of the keys is the order in which the table was built: `.cjs`, `.js`, `.mjs`, `.json`, `.yaml`, `.yml`, `.ts`, `.cts`, `.mts`, and the empty string.
+The order of the keys is the order in which the table was built. When `extensions` is omitted, it is `.cjs`, `.js`, `.mjs`, `.json`, `.yaml`, `.yml`, `.ts`, `.cts`, `.mts`, and the empty string.
 Because the join uses `path.resolve`, the directory is ignored when `configFileName` is an absolute path.
 
 When a file is found with `fs.existsSync`, it is read as follows.
@@ -53,11 +64,11 @@ In both cases, when the value read is falsy, the next candidate is checked.
 
 A candidate with one loader is not read twice. Earlier, one loader was treated as an array, and the same file was run twice. This was fixed because it is a problem when a configuration file has side effects ([#4](https://github.com/azu/rc-config-loader/pull/4)).
 
-### 4. Check package.json
+### 5. Check package.json
 
 When no candidate is found and `packageJSON` is enabled, the `package.json` of the same directory is read with `JSON5.parse`, and the value of the field is returned when it is truthy.
 
-### 5. Move to the parent
+### 6. Move to the parent
 
 The last element of `parts` is removed, and `findConfig` is called again.
 When `parts` is empty, `undefined` is returned.
@@ -86,7 +97,7 @@ sequenceDiagram
 
 ## Data model and ER diagram
 
-`rcConfigLoaderOption` (`packageJSON`, `configFileName`, `defaultExtension`, `cwd`) and the return type `rcConfigResult` (`config`, `filePath`) are defined in `src/types.ts`.
+`rcConfigLoaderOption` (`packageJSON`, `configFileName`, `defaultExtension`, `cwd`, `extensions`) and the return type `rcConfigResult` (`config`, `filePath`) are defined in `src/types.ts`.
 
 ## API and interfaces
 
@@ -114,6 +125,7 @@ None. Permission to read files follows the Node.js process.
 ## Security considerations
 
 The search goes up to the root of the file system, and there is no option to stop it on the way.
+When `extensions` is given, files of the other extensions are not even checked with `fs.existsSync`, so they are neither read nor run.
 
 ## Deployment notes
 
@@ -123,6 +135,15 @@ None.
 
 No alternatives or reasons are recorded for searching up through the parents, for checking the candidates with an extension first, or for checking `package.json` after the candidates of the same directory, so they are unknown.
 The search is based on [zkochan/rcfile](https://github.com/zkochan/rcfile).
+
+### Limiting by default when `extensions` is omitted
+
+Supporting TypeScript and ECMAScript Modules adds extensions to search, so limiting them by default was an option. To keep the behavior of existing tools, every extension is searched when the option is omitted.
+
+### Widening `defaultExtension` to also mean the extensions to search
+
+`defaultExtension` means which formats to try for the candidate without an extension, so it is kept with that meaning, and the extensions to search are a separate option, `extensions`.
+When `defaultExtension` is omitted, `extensions` limits its default, so that giving only `extensions` is enough to keep other formats from being read.
 
 ## Open questions
 
