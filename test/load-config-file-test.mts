@@ -1,6 +1,7 @@
 import assert from "assert";
 import fs from "fs";
 import os from "os";
+import { createRequire } from "module";
 import path from "path";
 import { loadConfigFile } from "../lib/rc-config-loader.js";
 
@@ -66,6 +67,19 @@ describe("loadConfigFile", () => {
             } finally {
                 fs.rmSync(tmpDir, { recursive: true, force: true });
             }
+        });
+        it("should not keep loaded config modules in module.children", () => {
+            const require = createRequire(import.meta.url);
+            const libModule = require.cache[require.resolve("../lib/rc-config-loader.js")];
+            assert.ok(libModule);
+            const filePaths = ["rc.cjs", "rc.mjs", "rc.ts"].map((fileName) => path.join(fixturesDir, fileName));
+            for (let i = 0; i < 3; i++) {
+                filePaths.forEach((filePath) => loadConfigFile(filePath));
+            }
+            const childIds = libModule.children.map((child) => child.id);
+            filePaths.forEach((filePath) => {
+                assert.ok(!childIds.includes(filePath), `${filePath} should not be in module.children`);
+            });
         });
     });
 
