@@ -29,10 +29,12 @@ const defaultLoaderByExt: ExtensionLoaderMap = {
     ".mts": loadJSConfigFile
 };
 
+const defaultDefaultExtension: ExtensionName[] = [".json", ".yaml", ".yml", ".js", ".cjs"];
+
 const defaultOptions: Required<Pick<rcConfigLoaderOption, RequiredOption>> &
     Omit<rcConfigLoaderOption, RequiredOption> = {
     packageJSON: false,
-    defaultExtension: [".json", ".yaml", ".yml", ".js", ".cjs"],
+    defaultExtension: defaultDefaultExtension,
     cwd: process.cwd()
 };
 
@@ -41,6 +43,29 @@ const selectLoader = (defaultLoaderByExt: ExtensionLoaderMap, extension: Extensi
         throw new Error(`${extension} is not supported.`);
     }
     return defaultLoaderByExt[extension];
+};
+
+const isSupportedExtension = (extension: string): extension is ExtensionName => {
+    return Object.prototype.hasOwnProperty.call(defaultLoaderByExt, extension);
+};
+
+/**
+ * Return the extensions that are allowed to load.
+ * If `extensions` is not specified, all supported extensions are allowed.
+ */
+const resolveAllowedExtensions = (extensions?: ExtensionName[]): ExtensionName[] => {
+    if (extensions === undefined) {
+        return Object.keys(defaultLoaderByExt) as ExtensionName[];
+    }
+    if (!Array.isArray(extensions) || extensions.length === 0) {
+        throw new Error("extensions should be a non-empty array.");
+    }
+    extensions.forEach((extension) => {
+        if (!isSupportedExtension(extension)) {
+            throw new Error(`${extension} is not supported.`);
+        }
+    });
+    return extensions;
 };
 
 /**
@@ -56,20 +81,34 @@ export function rcFile<R extends {}>(
 ): PossibleUndefined<rcConfigResult<R>> {
     // path/to/config or basename of config file.
     const configFileName = opts.configFileName || `.${pkgName}rc`;
-    const defaultExtension = opts.defaultExtension || defaultOptions.defaultExtension;
+    const allowedExtensions = resolveAllowedExtensions(opts.extensions);
+    // If `extensions` is specified, the default `defaultExtension` is limited to the allowed extensions.
+    const defaultExtension =
+        opts.defaultExtension || defaultDefaultExtension.filter((extension) => allowedExtensions.includes(extension));
     const cwd = opts.cwd || defaultOptions.cwd;
     const packageJSON = opts.packageJSON || defaultOptions.packageJSON;
     const packageJSONFieldName = typeof packageJSON === "object" ? packageJSON.fieldName : pkgName;
 
     const parts = splitPath(cwd);
-    const loadersByOrder = Array.isArray(defaultExtension)
-        ? defaultExtension.map((extension) => selectLoader(defaultLoaderByExt, extension))
-        : selectLoader(defaultLoaderByExt, defaultExtension);
-
-    const loaderByExt = {
-        ...defaultLoaderByExt,
-        "": loadersByOrder
+    const selectAllowedLoader = (extension: ExtensionName): Loader => {
+        const loader = selectLoader(defaultLoaderByExt, extension);
+        if (!allowedExtensions.includes(extension)) {
+            throw new Error(`${extension} in defaultExtension is not included in extensions.`);
+        }
+        return loader;
     };
+    const loadersByOrder = Array.isArray(defaultExtension)
+        ? defaultExtension.map((extension) => selectAllowedLoader(extension))
+        : selectAllowedLoader(defaultExtension);
+
+    // Search the extensions in the order of `extensions`, then the name without extension.
+    const loaderByExt: { [index: string]: Loader | Loader[] } = {};
+    allowedExtensions.forEach((extension) => {
+        loaderByExt[extension] = defaultLoaderByExt[extension];
+    });
+    if (!Array.isArray(loadersByOrder) || loadersByOrder.length > 0) {
+        loaderByExt[""] = loadersByOrder;
+    }
     return findConfig<R>({
         parts,
         loaderByExt,
@@ -95,6 +134,7 @@ export function rcFile<R extends {}>(
  */
 export function loadConfigFile<R extends {}>(filePath: string, opts: loadConfigFileOption = {}): rcConfigResult<R> {
     const cwd = opts.cwd || defaultOptions.cwd;
+    const allowedExtensions = resolveAllowedExtensions(opts.extensions);
     const configLocation = path.resolve(cwd, filePath);
     if (!fs.existsSync(configLocation)) {
         const error: NodeJS.ErrnoException = new Error(`Config file not found: ${configLocation}`);
@@ -103,29 +143,53 @@ export function loadConfigFile<R extends {}>(filePath: string, opts: loadConfigF
         throw error;
     }
     const ext = path.extname(configLocation);
-    if (Object.prototype.hasOwnProperty.call(defaultLoaderByExt, ext)) {
-        const loader = defaultLoaderByExt[ext as ExtensionName];
+    if (isSupportedExtension(ext)) {
+        if (!allowedExtensions.includes(ext)) {
+            throw createNotAllowedError(configLocation);
+        }
+        const loader = defaultLoaderByExt[ext];
         return {
             config: loader<R>(configLocation, false),
             filePath: configLocation
         };
     }
     // Unknown or no extension like `.secretlintrc`: try JSON, YAML, then JavaScript.
-    // Errors are suppressed except for the last loader, so the error of JavaScript loader is thrown when all fail.
-    const fallbackLoaders: Loader[] = [loadJSONConfigFile, loadYAMLConfigFile];
-    for (const loader of fallbackLoaders) {
-        const result = loader<R>(configLocation, true);
-        if (result !== undefined) {
+    // Each format is tried only if its extension is allowed: `.json`, `.yaml` or `.yml`, and `.js`.
+    // Errors are suppressed except for the last loader, so the error of the last loader is thrown when all fail.
+    const fallbackLoaders: Loader[] = [];
+    if (allowedExtensions.includes(".json")) {
+        fallbackLoaders.push(loadJSONConfigFile);
+    }
+    if (allowedExtensions.includes(".yaml") || allowedExtensions.includes(".yml")) {
+        fallbackLoaders.push(loadYAMLConfigFile);
+    }
+    if (allowedExtensions.includes(".js")) {
+        fallbackLoaders.push(loadJSConfigFile);
+    }
+    if (fallbackLoaders.length === 0) {
+        throw createNotAllowedError(configLocation);
+    }
+    for (let i = 0; i < fallbackLoaders.length; i++) {
+        const isLast = i === fallbackLoaders.length - 1;
+        const result = fallbackLoaders[i]<R>(configLocation, !isLast);
+        if (isLast || result !== undefined) {
             return {
                 config: result,
                 filePath: configLocation
             };
         }
     }
-    return {
-        config: loadJSConfigFile(configLocation, false),
-        filePath: configLocation
-    };
+    // unreachable: the last loader returns or throws
+    throw createNotAllowedError(configLocation);
+}
+
+function createNotAllowedError(configLocation: string): Error {
+    const error: NodeJS.ErrnoException = new Error(
+        `Config file is not allowed by extensions option: ${configLocation}`
+    );
+    error.code = "ERR_RC_CONFIG_EXTENSION_NOT_ALLOWED";
+    error.path = configLocation;
+    return error;
 }
 
 /**

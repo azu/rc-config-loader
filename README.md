@@ -64,6 +64,8 @@ export interface rcConfigLoaderOption {
     defaultExtension?: string | string[];
     // where start to load
     cwd?: string;
+    // extensions to search, in order of priority. Default: all supported extensions
+    extensions?: string[];
 }
 /**
  * Find and load rcfile, return { config, filePath }
@@ -133,6 +135,8 @@ Use it when a user specifies the config file path by a CLI option like `--config
 export interface loadConfigFileOption {
     // the base directory to resolve a relative file path. Default: `process.cwd()`
     cwd?: string;
+    // extensions allowed to load. Default: all supported extensions
+    extensions?: string[];
 }
 export declare function loadConfigFile<R extends {}>(filePath: string, opts?: loadConfigFileOption): {
     config: R;
@@ -199,6 +203,30 @@ export default config;
 - ES Modules config file can not use top-level `await`, because `require(esm)` loads only synchronous modules
 - TypeScript config file can use only [erasable syntax](https://nodejs.org/api/typescript.html#typescript-features). For example, `enum` is not supported, and `tsconfig.json` is not read
 - Node.js caches ES Modules. If an ES Modules config file is changed in the same process, the changed content is not loaded
+
+### Limit the extensions
+
+Both `rcFile` and `loadConfigFile` accept `extensions` option to limit the extensions of config files.
+Use it when your tool does not want to run JavaScript or TypeScript config files.
+
+```js
+import { rcFile, loadConfigFile } from "rc-config-loader"
+
+// search only .your-applicationrc.json, .your-applicationrc.yaml, and .your-applicationrc.yml
+// The order of extensions is the priority of the search
+rcFile("your-application", {
+    extensions: [".json", ".yaml", ".yml"]
+});
+
+// throws an Error that has `code: "ERR_RC_CONFIG_EXTENSION_NOT_ALLOWED"` for `config.js`
+loadConfigFile("config.js", {
+    extensions: [".json", ".yaml", ".yml"]
+});
+```
+
+- `rcFile`: if `defaultExtension` is not specified, a file without extension like `.your-applicationrc` is tried only as the formats in `extensions`
+- `loadConfigFile`: a file without known extension is tried only as JSON(`.json`), YAML(`.yaml` or `.yml`), and JavaScript(`.js`) that are in `extensions`
+- An empty array or an unsupported extension throws an Error
 
 ### Example
 

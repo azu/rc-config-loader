@@ -29,9 +29,23 @@ export interface rcConfigLoaderOption {
 
     /** where start to load */
     cwd?: string;
+
+    /**
+     * extensions of config files to search, in order of priority.
+     * Default: all supported extensions.
+     * If it is specified, the default `defaultExtension` is limited to these extensions.
+     */
+    extensions?: ExtensionName[];
 }
 
 export interface loadConfigFileOption {
     /** the base directory to resolve a relative file path. Default: `process.cwd()` */
     cwd?: string;
+
+    /**
+     * extensions of config files to load.
+     * Default: all supported extensions.
+     * A file without a known extension is tried only as the formats of the allowed `.json`, `.yaml`/`.yml`, and `.js`.
+     */
+    extensions?: ExtensionName[];
 }

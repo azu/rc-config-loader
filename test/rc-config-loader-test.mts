@@ -209,4 +209,43 @@ describe("rc-config-loader", () => {
             rcFile("invalidjson", { cwd: path.join(import.meta.dirname, "fixtures") });
         }, Error);
     });
+
+    describe("extensions", () => {
+        const cwd = path.join(import.meta.dirname, "fixtures/extensions");
+        it("should search only the specified extensions", () => {
+            const results = rcFile("limit", { cwd, extensions: [".json"] });
+            assert.deepStrictEqual(results, { config: { type: "json" }, filePath: path.join(cwd, ".limitrc.json") });
+        });
+        it("should search the extensions in the specified order", () => {
+            const jsFirst = rcFile("limit", { cwd, extensions: [".js", ".json"] });
+            assert.strictEqual(jsFirst?.filePath, path.join(cwd, ".limitrc.js"));
+            const jsonFirst = rcFile("limit", { cwd, extensions: [".json", ".js"] });
+            assert.strictEqual(jsonFirst?.filePath, path.join(cwd, ".limitrc.json"));
+        });
+        it("should not find a config file of an extension that is not specified", () => {
+            assert.strictEqual(rcFile("onlyjs", { cwd, extensions: [".json", ".yaml", ".yml"] }), undefined);
+        });
+        it("should limit the default defaultExtension to the specified extensions", () => {
+            // .noextrc is JavaScript, and it is not tried as JavaScript
+            assert.strictEqual(rcFile("noext", { cwd, extensions: [".json"] }), undefined);
+            assert.deepStrictEqual(rcFile("noext", { cwd, extensions: [".json", ".js"] })?.config, {
+                type: "no-ext-js"
+            });
+        });
+        it("should throw an error if defaultExtension includes an extension that is not specified", () => {
+            assert.throws(() => rcFile("noext", { cwd, extensions: [".json"], defaultExtension: [".js"] }), {
+                message: ".js in defaultExtension is not included in extensions."
+            });
+        });
+        it("should throw an error if extensions is empty", () => {
+            assert.throws(() => rcFile("limit", { cwd, extensions: [] }), {
+                message: "extensions should be a non-empty array."
+            });
+        });
+        it("should throw an error if extensions includes an unsupported extension", () => {
+            assert.throws(() => rcFile("limit", { cwd, extensions: [".toml" as any] }), {
+                message: ".toml is not supported."
+            });
+        });
+    });
 });
