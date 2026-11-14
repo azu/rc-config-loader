@@ -30,7 +30,8 @@ export interface rcConfigLoaderOption {
     /**
      * extensions of config files to search, in order of priority.
      * A file without extension like `.<product>rc` is tried as the formats of `.json`, `.yaml`/`.yml`, and `.js` in this list.
-     * Default: [".json", ".yaml", ".yml", ".js", ".cjs", ".mjs", ".ts", ".cts", ".mts"]
+     * Default: [".json", ".yaml", ".yml", ".js", ".ts"]
+     * `.cjs`, `.mjs`, `.cts`, and `.mts` are searched only when they are given.
      */
     extensions?: ExtensionName[];
 }

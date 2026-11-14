@@ -43,8 +43,8 @@ describe("rc-config-loader", () => {
         assert.deepStrictEqual(config, { bar: "bar" });
     });
 
-    it("should read cjs config in current directory", () => {
-        const results = rcFile("baz", { cwd: path.join(import.meta.dirname, "fixtures") });
+    it("should read cjs config in current directory when .cjs is in extensions", () => {
+        const results = rcFile("baz", { cwd: path.join(import.meta.dirname, "fixtures"), extensions: [".cjs"] });
         if (!results) {
             throw new Error("not found");
         }
@@ -52,8 +52,8 @@ describe("rc-config-loader", () => {
         assert.deepStrictEqual(config, { baz: "baz" });
     });
 
-    it("should read mjs config in current directory", () => {
-        const results = rcFile("mjsrcfile", { cwd: path.join(import.meta.dirname, "fixtures") });
+    it("should read mjs config in current directory when .mjs is in extensions", () => {
+        const results = rcFile("mjsrcfile", { cwd: path.join(import.meta.dirname, "fixtures"), extensions: [".mjs"] });
         if (!results) {
             throw new Error("not found");
         }
@@ -224,6 +224,15 @@ describe("rc-config-loader", () => {
         });
         it("should not find a config file of an extension that is not specified", () => {
             assert.strictEqual(rcFile("onlyjs", { cwd, extensions: [".json", ".yaml", ".yml"] }), undefined);
+        });
+        it("should not search .cjs, .mjs, .cts, and .mts by default", () => {
+            assert.strictEqual(rcFile("optin", { cwd }), undefined);
+            assert.strictEqual(rcFile("baz", { cwd: path.join(import.meta.dirname, "fixtures") }), undefined);
+            assert.strictEqual(rcFile("mjsrcfile", { cwd: path.join(import.meta.dirname, "fixtures") }), undefined);
+        });
+        it("should search .cjs when it is in extensions", () => {
+            const results = rcFile("optin", { cwd, extensions: [".json", ".cjs"] });
+            assert.deepStrictEqual(results, { config: { type: "cjs" }, filePath: path.join(cwd, ".optinrc.cjs") });
         });
         it("should prefer JSON to JavaScript by default", () => {
             const results = rcFile("priority", { cwd });

@@ -30,10 +30,17 @@ const defaultLoaderByExt: ExtensionLoaderMap = {
 };
 
 /**
- * The default extensions and their priority.
+ * Every supported extension. `loadConfigFile` allows them by default.
+ */
+const supportedExtensions: ExtensionName[] = [".json", ".yaml", ".yml", ".js", ".cjs", ".mjs", ".ts", ".cts", ".mts"];
+
+/**
+ * The default extensions to search by `rcFile`, and their priority.
+ * `.cjs`, `.mjs`, `.cts`, and `.mts` are searched only when they are given in `extensions`,
+ * to keep the number of existence checks small.
  * A file without extension like `.<product>rc` is tried as JSON, YAML, then JavaScript.
  */
-const defaultExtensions: ExtensionName[] = [".json", ".yaml", ".yml", ".js", ".cjs", ".mjs", ".ts", ".cts", ".mts"];
+const defaultSearchExtensions: ExtensionName[] = [".json", ".yaml", ".yml", ".js", ".ts"];
 
 const defaultOptions: Required<Pick<rcConfigLoaderOption, RequiredOption>> &
     Omit<rcConfigLoaderOption, RequiredOption> = {
@@ -49,7 +56,10 @@ const isSupportedExtension = (extension: string): extension is ExtensionName => 
  * Return the extensions that are allowed to load, in order of priority.
  * If `extensions` is not specified, return the default extensions.
  */
-const resolveAllowedExtensions = (extensions?: ExtensionName[]): ExtensionName[] => {
+const resolveAllowedExtensions = (
+    extensions: ExtensionName[] | undefined,
+    defaultExtensions: ExtensionName[]
+): ExtensionName[] => {
     if (extensions === undefined) {
         return defaultExtensions;
     }
@@ -104,7 +114,7 @@ export function rcFile<R extends {}>(
     }
     // path/to/config or basename of config file.
     const configFileName = opts.configFileName || `.${pkgName}rc`;
-    const allowedExtensions = resolveAllowedExtensions(opts.extensions);
+    const allowedExtensions = resolveAllowedExtensions(opts.extensions, defaultSearchExtensions);
     const cwd = opts.cwd || defaultOptions.cwd;
     const packageJSON = opts.packageJSON || defaultOptions.packageJSON;
     const packageJSONFieldName = typeof packageJSON === "object" ? packageJSON.fieldName : pkgName;
@@ -149,7 +159,7 @@ export function rcFile<R extends {}>(
  */
 export function loadConfigFile<R extends {}>(filePath: string, opts: loadConfigFileOption = {}): rcConfigResult<R> {
     const cwd = opts.cwd || defaultOptions.cwd;
-    const allowedExtensions = resolveAllowedExtensions(opts.extensions);
+    const allowedExtensions = resolveAllowedExtensions(opts.extensions, supportedExtensions);
     const configLocation = path.resolve(cwd, filePath);
     if (!fs.existsSync(configLocation)) {
         const error: NodeJS.ErrnoException = new Error(`Config file not found: ${configLocation}`);
