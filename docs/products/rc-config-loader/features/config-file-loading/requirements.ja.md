@@ -14,6 +14,7 @@ CLIツールが`--config <path>`のようなオプションで、利用者が指
 - 拡張子から形式を選ぶこと
 - 拡張子から形式が決まらないファイルの読み方
 - ファイルがないときと、読めないときのエラー
+- 読む拡張子を絞ること
 
 ### スコープ外
 
@@ -103,6 +104,36 @@ Scenario: ファイルが読めない場合、`Cannot read config file`のエラ
 - When: ツールが`loadConfigFile("invalid.json", { cwd: 起点 })`を呼ぶ。
 - Then: `Cannot read config file: <起点>/invalid.json`で始まるエラーが投げられる。
 
+### 読む拡張子を絞る
+
+CLIツールの作者として、利用者が指定したファイルでも、ツールが受け付ける拡張子のものだけを読みたい。それによって、`--config foo.js`のような指定でJavaScriptが実行されることを防げる。
+
+**受け入れ条件:**
+
+Scenario: 指定した拡張子のファイルの場合、読んだ設定が返る
+
+- Given: 起点に`rc.json`がある。
+- When: ツールが`loadConfigFile("rc.json", { cwd: 起点, extensions: [".json"] })`を呼ぶ。
+- Then: `rc.json`の設定が返る。
+
+Scenario: 指定していない拡張子のファイルの場合、読まずにエラーになる
+
+- Given: 起点に`rc.js`がある。
+- When: ツールが`loadConfigFile("rc.js", { cwd: 起点, extensions: [".json", ".yaml"] })`を呼ぶ。
+- Then: `rc.js`は実行されず、`code`が`ERR_RC_CONFIG_EXTENSION_NOT_ALLOWED`で、`path`が`<起点>/rc.js`のエラーが投げられる。
+
+Scenario: 拡張子のないファイルは、指定した拡張子の形式でだけ試す
+
+- Given: 起点に、JavaScriptで書いた拡張子のない`.jsrc`がある。
+- When: ツールが`loadConfigFile(".jsrc", { cwd: 起点, extensions: [".json"] })`を呼ぶ。
+- Then: `.jsrc`はJavaScriptとして実行されず、`Cannot read config file: <起点>/.jsrc`で始まるJSONのエラーが投げられる。
+
+Scenario: 拡張子のないファイルに試せる形式がない場合、エラーになる
+
+- Given: 起点に拡張子のない`.jsonrc`がある。
+- When: ツールが`loadConfigFile(".jsonrc", { cwd: 起点, extensions: [".ts"] })`を呼ぶ。
+- Then: `code`が`ERR_RC_CONFIG_EXTENSION_NOT_ALLOWED`のエラーが投げられる。
+
 ## KPI
 
 なし。成功指標を定めていません。
@@ -117,6 +148,7 @@ Scenario: ファイルが読めない場合、`Cannot read config file`のエラ
 
 - `filePath`: 設定ファイルのパス。絶対パスか、`cwd`からの相対パス
 - `cwd`: 相対パスを解決する起点。省略時は現在のディレクトリ
+- `extensions`: 読んでよい拡張子。省略時は`[".json", ".yaml", ".yml", ".js", ".cjs", ".mjs", ".ts", ".cts", ".mts"]`
 
 **出力:** `{ config, filePath }`。`filePath`は読んだファイルの絶対パスです。
 
@@ -130,7 +162,10 @@ Scenario: ファイルが読めない場合、`Cannot read config file`のエラ
 ##### 形式の選び方
 
 拡張子が[設定ファイルの形式](../config-formats/requirements.ja.md#拡張子と形式の対応)の表にあれば、その形式で読みます。
-表にない拡張子と拡張子のない名前は、JSON、YAML、JavaScriptの順に試し、最初に読めた形式の設定を返します。
+拡張子が表にあり、`extensions`に含まれないときは、ファイルを読まずにエラーにします。
+
+表にない拡張子と拡張子のない名前は、`extensions`に`.json`があればJSON、`.yaml`か`.yml`があればYAML、`.js`があればJavaScriptとして、`extensions`に現れた順に試し、最初に読めた形式の設定を返します。
+既定値では、JSON、YAML、JavaScriptの順です。
 
 #### 例外ケースでの振る舞い
 
@@ -144,7 +179,16 @@ Scenario: ファイルが読めない場合、`Cannot read config file`のエラ
 
 ##### どの形式でも読めない
 
-JavaScriptとして読んだときのエラーを投げます。メッセージは`Cannot read config file: <絶対パス>`で始まります。
+最後に試した形式のエラーを投げます。`extensions`を省略したときはJavaScriptのエラーです。メッセージは`Cannot read config file: <絶対パス>`で始まります。
+
+##### `extensions`で許していない
+
+`Config file is not allowed by extensions option: <絶対パス>`をメッセージとし、`code`が`ERR_RC_CONFIG_EXTENSION_NOT_ALLOWED`、`path`が絶対パスのエラーを投げます。
+ファイルがないときは、こちらより先に`ENOENT`のエラーになります。
+
+##### `extensions`の誤り
+
+`extensions`が空の配列なら`extensions should be a non-empty array.`、表にない拡張子を含むなら`<拡張子> is not supported.`のエラーを投げます。
 
 ## データ要件
 
@@ -168,6 +212,7 @@ JavaScriptとして読んだときのエラーを投げます。メッセージ�
 
 指定されたファイルの中身がJavaScriptかTypeScriptとして読まれると、そのコードを実行します。
 拡張子のない名前も、JSONとYAMLで読めなければJavaScriptとして実行します。
+`extensions`からJavaScriptとTypeScriptの拡張子を除くと、指定されたファイルがJavaScriptやTypeScriptとして実行されることはありません。
 
 ## 未決事項
 

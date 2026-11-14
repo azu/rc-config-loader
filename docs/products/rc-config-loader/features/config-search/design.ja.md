@@ -26,38 +26,47 @@
 
 ### 1. オプションを決める
 
-`configFileName`、`defaultExtension`、`cwd`、`packageJSON`を、省略されていれば既定値で補います。
+削除した`defaultExtension`がオプションにあれば、`defaultExtension option is removed. Use extensions option instead.`のエラーを投げます。値が`undefined`でも、キーがあれば投げます。
+`configFileName`、`cwd`、`packageJSON`を、省略されていれば既定値で補います。
 `packageJSON`がオブジェクトなら`fieldName`を、そうでなければ`pkgName`をフィールド名にします。
 
-### 2. 拡張子のない候補のローダーを決める
+### 2. 探す拡張子を決める
 
-`defaultExtension`の各拡張子を`selectLoader`でローダーに変えます。
-`selectLoader`は、共通の表`defaultLoaderByExt`にない拡張子に`<拡張子> is not supported.`のエラーを投げます。
-`defaultExtension`が配列ならローダーの配列（`loadersByOrder`）、1つならローダー1つになります。
+`resolveAllowedExtensions`で、探してよい拡張子の配列（`allowedExtensions`）を決めます。
+`extensions`を省略したときは既定値`defaultExtensions`（`[".json", ".yaml", ".yml", ".js", ".cjs", ".mjs", ".ts", ".cts", ".mts"]`）を、指定したときはその配列を返します。
+指定した配列が空なら`extensions should be a non-empty array.`、表にない拡張子を含むなら`<拡張子> is not supported.`のエラーを投げます。
 
-探索の表`loaderByExt`は、拡張子からローダーを引く共通の表`defaultLoaderByExt`に、空文字列の拡張子として`loadersByOrder`を加えたものです。
+### 3. 拡張子のない候補のローダーを決める
 
-### 3. ディレクトリごとに候補を確かめる
+`selectLoadersForNoExtension`が、`allowedExtensions`の順に、`.json`ならJSON、`.yaml`か`.yml`ならYAML、`.js`ならJavaScriptのローダーを集めます。
+ほかの拡張子はローダーを足しません。拡張子のないファイルは、Node.jsの型の除去の対象にならないためです。
+同じローダーは2回入れません。`.yaml`と`.yml`の両方があってもYAMLは1回だけ試し、JavaScriptのファイルを2回実行しません。
+集めたローダーが1つならローダー1つ、それ以外ならローダーの配列を`loadersByOrder`にします。
+
+探索の表`loaderByExt`は、`allowedExtensions`の順に各拡張子のローダーを入れ、最後に空文字列の拡張子として`loadersByOrder`を加えたものです。
+集めたローダーが0個なら、空文字列の拡張子は加えません。
+
+### 4. ディレクトリごとに候補を確かめる
 
 `cwd`を`path.resolve`で絶対パスにし、区切り文字で分けた配列`parts`にします。
 `findConfig`は`loaderByExt`のキーの順に、`parts`のディレクトリへ`configFileName + 拡張子`を`path.resolve`で結合した場所を確かめます。
-キーの順は表を作った順で、`.cjs`、`.js`、`.mjs`、`.json`、`.yaml`、`.yml`、`.ts`、`.cts`、`.mts`、空文字列です。
+キーの順は表を作った順です。`extensions`を省略したときは`.json`、`.yaml`、`.yml`、`.js`、`.cjs`、`.mjs`、`.ts`、`.cts`、`.mts`、空文字列です。
 `path.resolve`で結合するため、`configFileName`が絶対パスならディレクトリは無視されます。
 
 ファイルが`fs.existsSync`で見つかったら、次のように読みます。
 
-- ローダーが1つ（拡張子付きの候補、または`defaultExtension`が1つ）なら、`suppress = false`で読みます。読めなければエラーが投げられます。
+- ローダーが1つ（拡張子付きの候補、または拡張子のない候補で試す形式が1つ）なら、`suppress = false`で読みます。読めなければエラーが投げられます。
 - ローダーが配列なら、順に`suppress = true`で読み、最初に値を返したローダーの結果を使います。どれも`undefined`を返したら、この候補を飛ばします。
 
 どちらの場合も、読んだ値が偽（falsy）なら次の候補へ進みます。
 
 ローダーが1つの候補を2回読まないようにしています。以前は1つのローダーを配列として扱った結果、同じファイルを2回実行していました。設定ファイルに副作用があると問題になるため直しました（[#4](https://github.com/azu/rc-config-loader/pull/4)）。
 
-### 4. package.jsonを確かめる
+### 5. package.jsonを確かめる
 
 候補がどれも見つからず`packageJSON`が有効なら、同じディレクトリの`package.json`を`JSON5.parse`で読み、フィールドの値が真（truthy）ならそれを返します。
 
-### 5. 親へ移る
+### 6. 親へ移る
 
 `parts`の末尾を取り除いて`findConfig`を呼び直します。
 `parts`が空になったら`undefined`を返します。
@@ -86,7 +95,7 @@ sequenceDiagram
 
 ## データモデル・ER 図
 
-`rcConfigLoaderOption`（`packageJSON`、`configFileName`、`defaultExtension`、`cwd`）と、戻り値の`rcConfigResult`（`config`、`filePath`）を`src/types.ts`で定義しています。
+`rcConfigLoaderOption`（`packageJSON`、`configFileName`、`cwd`、`extensions`）と、戻り値の`rcConfigResult`（`config`、`filePath`）を`src/types.ts`で定義しています。
 
 ## API・インターフェース
 
@@ -114,6 +123,7 @@ READMEのAPIの節が利用者向けの説明です。
 ## セキュリティ上の留意事項
 
 探索はファイルシステムのルートまで進み、途中で止める指定はありません。
+`extensions`を指定すると、指定していない拡張子のファイルは`fs.existsSync`でも確かめないため、読まれることも実行されることもありません。
 
 ## デプロイに関する特記事項
 
@@ -123,6 +133,24 @@ READMEのAPIの節が利用者向けの説明です。
 
 親へさかのぼる探索、拡張子付きの候補を先に確かめること、`package.json`を同じディレクトリの候補の後に確かめることについて、検討した代替手段と判断理由の記録はなく、不明です。
 探索は[zkochan/rcfile](https://github.com/zkochan/rcfile)を元にしています。
+
+### `extensions`を省略したときも既定で絞る
+
+TypeScriptとECMAScript Modulesの対応で探す拡張子が増えるため、既定で絞る案もありました。既存のツールが読める設定ファイルを減らさないため、省略時はすべての拡張子を探すことにしました。
+
+### `defaultExtension`を残し、`extensions`と並べる
+
+最初の案では、拡張子のない候補の形式を表す`defaultExtension`を残し、探す拡張子を別の`extensions`にしました。
+2つのオプションの違いが分かりにくいため、`extensions`に一本化し、`defaultExtension`は削除しました（メジャーリリース）。
+textlintとsecretlintは`defaultExtension`を指定していません。
+指定されたときに黙って無視せず、エラーにして移行先を示します。
+
+### 既定の優先順を`.cjs`、`.js`から始める
+
+一本化の前は、拡張子付きの候補を`.cjs`、`.js`、`.json`、`.yaml`、`.yml`の順に確かめていました。
+この順を既定値にすると、拡張子のない候補もJavaScriptから試すことになります。
+そのため、拡張子のない候補の既定の順（JSON、YAML、JavaScript）に合わせ、`.json`から始まる順を既定値にしました。
+同じディレクトリに`.foorc.cjs`と`.foorc.json`があると、以前は`.cjs`、今は`.json`が選ばれます。
 
 ## 未決事項
 

@@ -136,6 +136,47 @@ describe("loadConfigFile", () => {
             });
         });
     });
+
+    describe("extensions", () => {
+        const assertNotAllowed = (fn: () => unknown, filePath: string) => {
+            assert.throws(fn, (error: NodeJS.ErrnoException) => {
+                assert.strictEqual(error.code, "ERR_RC_CONFIG_EXTENSION_NOT_ALLOWED");
+                assert.strictEqual(error.path, filePath);
+                return true;
+            });
+        };
+        it("should load a file of a specified extension", () => {
+            const { config } = loadConfigFile("rc.json", { cwd: fixturesDir, extensions: [".json"] });
+            assert.deepStrictEqual(config, { type: "json" });
+        });
+        it("should not load a file of an extension that is not specified", () => {
+            assertNotAllowed(
+                () => loadConfigFile("rc.js", { cwd: fixturesDir, extensions: [".json", ".yaml"] }),
+                path.join(fixturesDir, "rc.js")
+            );
+        });
+        it("should not try a file without extension as JavaScript if .js is not specified", () => {
+            const filePath = path.join(fixturesDir, ".jsrc");
+            assert.throws(() => loadConfigFile(".jsrc", { cwd: fixturesDir, extensions: [".json"] }), {
+                message: new RegExp(`^Cannot read config file: ${escapeRegExp(filePath)}`)
+            });
+        });
+        it("should try a file without extension as the specified formats", () => {
+            const { config } = loadConfigFile(".yamlrc", { cwd: fixturesDir, extensions: [".yml"] });
+            assert.deepStrictEqual(config, { type: "no-ext-yaml", list: ["a"] });
+        });
+        it("should throw an error if no format is allowed for a file without extension", () => {
+            assertNotAllowed(
+                () => loadConfigFile(".jsonrc", { cwd: fixturesDir, extensions: [".ts"] }),
+                path.join(fixturesDir, ".jsonrc")
+            );
+        });
+        it("should throw an error if extensions is empty", () => {
+            assert.throws(() => loadConfigFile("rc.json", { cwd: fixturesDir, extensions: [] }), {
+                message: "extensions should be a non-empty array."
+            });
+        });
+    });
 });
 
 function escapeRegExp(text: string): string {

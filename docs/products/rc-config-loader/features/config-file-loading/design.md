@@ -24,13 +24,14 @@ The implementation of the loader of each format is described in the design of th
 `loadConfigFile` is in `src/rc-config-loader.ts`, and reads one file without using `findConfig` of the search.
 The loaders of each format, and the table from extensions to loaders `defaultLoaderByExt`, are shared with `rcFile`.
 
-1. The path is made absolute with `path.resolve(cwd, filePath)`. The default `cwd` is `process.cwd()`.
-2. When `fs.existsSync` does not find the file, an error with `code = "ENOENT"` and `path` is thrown. The `code` is the same as file operation errors of Node.js, so that a caller can tell whether the file exists by `code`.
-3. When the extension from `path.extname` is in `defaultLoaderByExt`, that loader is called with `suppress = false`, and its result is returned.
-4. When the extension is not in the table, or there is no extension, the JSON and YAML loaders are called in order with `suppress = true`, and the first result other than `undefined` is returned.
-5. When neither can read the file, the JavaScript loader is called with `suppress = false`. If it cannot read the file, its error is thrown.
+1. `resolveAllowedExtensions` decides the extensions allowed to load (`allowedExtensions`). By default, every extension. Invalid values are handled in the same way as `rcFile`.
+2. The path is made absolute with `path.resolve(cwd, filePath)`. The default `cwd` is `process.cwd()`.
+3. When `fs.existsSync` does not find the file, an error with `code = "ENOENT"` and `path` is thrown. The `code` is the same as file operation errors of Node.js, so that a caller can tell whether the file exists by `code`.
+4. When the extension from `path.extname` is in `defaultLoaderByExt`, it is checked against `allowedExtensions`. When it is not included, `createNotAllowedError` throws an error with `code = "ERR_RC_CONFIG_EXTENSION_NOT_ALLOWED"` and `path`. When it is included, that loader is called with `suppress = false`, and its result is returned.
+5. When the extension is not in the table, or there is no extension, an array of loaders to try is built: with `selectLoadersForNoExtension`, the same as `rcFile`: in the order of `allowedExtensions`, the JSON loader for `.json`, the YAML loader for `.yaml` or `.yml`, and the JavaScript loader for `.js`. When the array is empty, the same error as in 4 is thrown.
+6. The loaders except the last are called in order with `suppress = true`, and the first result other than `undefined` is returned. When none can read the file, the last loader is called with `suppress = false`, and its result is returned or its error is thrown.
 
-Because only the last JavaScript loader is called with `suppress = false`, the JavaScript error reaches the user when no format can read the file.
+Because only the last loader is called with `suppress = false`, the error of the last format tried reaches the user when no format can read the file. When `extensions` is omitted, it is the JavaScript error.
 
 It is a separate function instead of using `configFileName` of `rcFile`, so that loading without searching could be added without changing the search and extension completion of `rcFile`. Because `rcFile` keeps its behavior, it was published as a minor release ([#33](https://github.com/azu/rc-config-loader/pull/33)).
 
@@ -59,7 +60,7 @@ sequenceDiagram
 
 ## Data model and ER diagram
 
-`loadConfigFileOption` (`cwd`) is defined in `src/types.ts`. The return type is `rcConfigResult`, the same as `rcFile`.
+`loadConfigFileOption` (`cwd`, `extensions`) is defined in `src/types.ts`. The return type is `rcConfigResult`, the same as `rcFile`.
 
 ## API and interfaces
 
@@ -97,6 +98,10 @@ None.
 ### Adding an option to `rcFile`
 
 The proposal in [#33](https://github.com/azu/rc-config-loader/pull/33) did not add an option to `rcFile` to skip the search, and made a separate function instead. No comparison with adding an option is recorded.
+
+### Treating a file of a disallowed extension the same as `ENOENT`
+
+Treating a disallowed extension as "not found" was an option. Because the file the user specified exists, it is a separate error `code`, so that the tool can say that it does not accept the format.
 
 ## Open questions
 

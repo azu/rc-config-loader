@@ -13,6 +13,7 @@ The parent Product is [rc-config-loader](../../product.md).
 - The names and extensions of the files to look for
 - The search from the starting directory up through the parent directories
 - Loading from a field of `package.json`
+- Limiting the extensions to search
 - What happens when nothing is found, and when a file cannot be read
 
 ### Out of scope
@@ -77,29 +78,65 @@ Scenario: When `packageJSON` is not given, `package.json` is not read
 - When: The tool calls `rcFile("qar", { cwd: start })`.
 - Then: `undefined` is returned.
 
-### Read a configuration file without an extension
+### Limit the extensions to search
 
-As a CLI tool author, I want to decide which formats to try for a file without an extension, such as `.foorc`, so that I can choose the ways of writing that my tool accepts.
+As a CLI tool author, I want to search only the extensions that my tool accepts, so that the tool does not read configuration files in formats it does not expect, especially JavaScript and TypeScript files that are run.
 
 **Acceptance criteria:**
 
-Scenario: When several formats are given, the configuration of the format that can read the file is returned
+Scenario: When `extensions` is omitted, JSON is preferred to JavaScript
+
+- Given: The starting directory has `.priorityrc.json` and `.priorityrc.cjs`.
+- When: The tool calls `rcFile("priority", { cwd: start })`.
+- Then: The configuration of `<start>/.priorityrc.json` is returned.
+
+Scenario: When `extensions` is given, only the candidates with those extensions are searched
+
+- Given: The starting directory has `.limitrc.js` and `.limitrc.json`.
+- When: The tool calls `rcFile("limit", { cwd: start, extensions: [".json"] })`.
+- Then: The configuration of `<start>/.limitrc.json` is returned. `.limitrc.js` is not run.
+
+Scenario: The order of `extensions` is the priority of the search
+
+- Given: The starting directory has `.limitrc.js` and `.limitrc.json`.
+- When: The tool calls `rcFile("limit", { cwd: start, extensions })` with `extensions: [".js", ".json"]` and with `extensions: [".json", ".js"]`.
+- Then: The former returns the configuration of `.limitrc.js`, and the latter returns that of `.limitrc.json`.
+
+Scenario: When only a configuration file of an extension that is not given exists, nothing is found
+
+- Given: From the starting directory up through the parents, the only candidate of `.onlyjsrc` is `.onlyjsrc.js`.
+- When: The tool calls `rcFile("onlyjs", { cwd: start, extensions: [".json", ".yaml", ".yml"] })`.
+- Then: `undefined` is returned.
+
+Scenario: The candidate without an extension is tried as the formats in `extensions`
 
 - Given: The starting directory has `.unknownrc` without an extension, written in JavaScript.
-- When: The tool calls `rcFile("unknown", { cwd: start, defaultExtension: [".json", ".yml", ".js"] })`.
+- When: The tool calls `rcFile("unknown", { cwd: start, extensions: [".json", ".yml", ".js"] })`.
 - Then: The configuration read as JavaScript and `<start>/.unknownrc` are returned.
 
-Scenario: When only one format is given and the file cannot be read as it, an error is thrown
+Scenario: When only one format can be tried for the candidate without an extension and it cannot read the file, an error is thrown
 
-- Given: The starting directory has `.foorc` without an extension, with invalid JSON.
-- When: The tool calls `rcFile("foo", { cwd: start, defaultExtension: ".json" })`.
-- Then: An error is thrown whose message starts with `Cannot read config file: <start>/.foorc`.
+- Given: The starting directory has `.noextrc` without an extension, written in JavaScript.
+- When: The tool calls `rcFile("noext", { cwd: start, extensions: [".json"] })`.
+- Then: `.noextrc` is not run as JavaScript, and an error is thrown whose message starts with `Cannot read config file: <start>/.noextrc`.
 
-Scenario: When an unsupported extension is given, an error is thrown
+Scenario: When `extensions` has no format for the candidate without an extension, it is not checked
+
+- Given: The starting directory has `.noextrc` without an extension.
+- When: The tool calls `rcFile("noext", { cwd: start, extensions: [".ts"] })`.
+- Then: `.noextrc` is not read, and `undefined` is returned.
+
+Scenario: When `extensions` is invalid, an error is thrown
 
 - Given: Nothing.
-- When: The tool calls `rcFile("foo", { defaultExtension: ".toml" })`.
-- Then: The error `.toml is not supported.` is thrown.
+- When: The tool calls `rcFile("limit", { extensions })` with `extensions: []` or `extensions: [".toml"]`.
+- Then: The errors `extensions should be a non-empty array.` and `.toml is not supported.` are thrown respectively.
+
+Scenario: When the removed `defaultExtension` is given, an error is thrown
+
+- Given: Nothing.
+- When: The tool calls `rcFile("noext", { defaultExtension: [".js"] })`.
+- Then: The error `defaultExtension option is removed. Use extensions option instead.` is thrown.
 
 ### Notice a broken configuration file
 
@@ -128,8 +165,8 @@ None. No metric has been defined.
 - The name of the tool (`pkgName`)
 - `configFileName`: the name of the file to look for. `.<pkgName>rc` by default
 - `cwd`: the starting directory of the search. The current directory by default
-- `defaultExtension`: the extensions of the formats to try for a file without an extension. One extension or an array. `[".json", ".yaml", ".yml", ".js", ".cjs"]` by default
 - `packageJSON`: whether to read `package.json`, and the name of the field to read
+- `extensions`: the extensions to search, and their priority. `[".json", ".yaml", ".yml", ".js", ".cjs", ".mjs", ".ts", ".cts", ".mts"]` by default
 
 **Output:** `{ config, filePath }`. `filePath` is the absolute path of the file that was read. `undefined` when nothing is found.
 
@@ -137,10 +174,20 @@ None. No metric has been defined.
 
 ##### Candidates
 
-In each directory, the candidates are `configFileName` with every extension in the table of [Configuration file formats](../config-formats/requirements.md#extensions-and-formats), and `configFileName` without an extension.
+In each directory, the candidates are `configFileName` with extensions, and `configFileName` without an extension.
+Only the extensions in `extensions` are added, in the order of `extensions`.
 The candidates with an extension are checked before the candidate without one.
 A candidate with an extension is read as the format of that extension.
-For the candidate without an extension, the formats are tried in the order of `defaultExtension`.
+
+##### Formats for the candidate without an extension
+
+The candidate without an extension is tried as JSON when `extensions` has `.json`, as YAML when it has `.yaml` or `.yml`, and as JavaScript when it has `.js`, in the order these appear in `extensions`.
+`.cjs`, `.mjs`, `.ts`, `.cts`, and `.mts` do not add a format for the candidate without an extension.
+When there is no format to try, the candidate without an extension is not checked.
+By default, it is tried as JSON, YAML, and then JavaScript.
+
+No configuration file is read as a format that is not in `extensions`.
+The field of `package.json` follows `packageJSON`, regardless of `extensions`.
 
 ##### Order of the search
 
@@ -171,12 +218,17 @@ The error of [Configuration file formats](../config-formats/requirements.md#the-
 
 ##### The candidate without an extension cannot be read
 
-When `defaultExtension` is one extension, the error of that format is thrown, and the search stops.
-For the case where `defaultExtension` is an array, see the open questions.
+When only one format is tried, the error of that format is thrown, and the search stops.
+For the case where two or more formats are tried, see the open questions.
 
-##### Unsupported extension
+##### Invalid `extensions`
 
-When `defaultExtension` includes an extension that is not in the table of [Configuration file formats](../config-formats/requirements.md#extensions-and-formats), the error `<extension> is not supported.` is thrown.
+When `extensions` is an empty array, the error `extensions should be a non-empty array.` is thrown.
+When it includes an extension that is not in the table of [Configuration file formats](../config-formats/requirements.md#extensions-and-formats), the error `<extension> is not supported.` is thrown.
+
+##### `defaultExtension` is given
+
+`defaultExtension` was removed. When it is given, the error `defaultExtension option is removed. Use extensions option instead.` is thrown.
 
 ##### package.json cannot be read
 
@@ -205,19 +257,13 @@ None. Only the local file system is read.
 
 Because the search goes up to the parents, a configuration file in a parent directory outside the project can be read.
 When a JavaScript or TypeScript configuration file is found, its code is run.
+When the JavaScript and TypeScript extensions are left out of `extensions`, such configuration files are not run.
 
 ## Open questions
 
-### Order of the candidates with an extension (unconfirmed)
-
-- **To confirm:** When a directory has candidates with several extensions, which one is intended to win.
-- **Candidates and sources:** The README lists the candidates in the order `.json`, `.yml`, `.yaml`, `.js`, and does not include `.cjs`. `src/rc-config-loader.ts` checks them in the order `.cjs`, `.js`, `.mjs`, `.json`, `.yaml`, `.yml`, `.ts`, `.cts`, `.mts`, and returns `.foorc.cjs` when both `.foorc.cjs` and `.foorc.json` exist. No test checks this order.
-- **Until decided:** The body does not state the order among the candidates with an extension.
-- **Decided by:** azu
-
 ### When the candidate without an extension cannot be read as any format (unconfirmed)
 
-- **To confirm:** When `defaultExtension` is an array (including the default), and the candidate without an extension cannot be read as any of the formats, whether to throw an error or to treat it as not found and continue the search.
+- **To confirm:** When two or more formats are tried for the candidate without an extension (including the default), and it cannot be read as any of them, whether to throw an error or to treat it as not found and continue the search.
 - **Candidates and sources:** The README says that `rcFile` throws an error if the content of the configuration file is malformed. `src/rc-config-loader.ts` does not throw in this case, and moves on to the next candidate and the parent directories. No test covers this case.
 - **Until decided:** The body does not state either behavior.
 - **Decided by:** azu

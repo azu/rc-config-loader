@@ -57,7 +57,7 @@ When each tool implements finding the file and loading each format, every tool c
 - **rc file (configuration file):** A file named `.<name>rc`, or that name with an extension such as `.json` or `.yml`. The README calls it "rc file" or "config file".
 - **Search:** Looking for a configuration file from the starting directory up through its parent directories.
 - **Starting directory (`cwd`):** The directory where the search starts, or the directory that a relative path is resolved from.
-- **Default extension (`defaultExtension`):** The extensions that tell which formats to try for a configuration file without an extension.
+- **Extensions (`extensions`):** The extensions of configuration files to search or allowed to load, and their priority. They also decide the formats to try for a configuration file without an extension.
 - **package.json field:** A configuration written in one field of `package.json` instead of a configuration file.
 - **Configuration object (`config`):** The result of reading a configuration file. Its meaning is decided by the tool that uses rc-config-loader.
 
