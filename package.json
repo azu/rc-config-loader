@@ -1,7 +1,7 @@
 {
   "name": "rc-config-loader",
   "version": "4.2.0",
-  "description": "load config file from .{product}rc.{json,yml,js}",
+  "description": "load config file from .{product}rc.{json,yml,js,ts}",
   "keywords": [
     "config",
     "configuration",
@@ -33,7 +33,7 @@
   "scripts": {
     "build": "tsc -p .",
     "prepublish": "npm run --if-present build",
-    "test": "mocha \"test/**/*.{js,ts}\"",
+    "test": "npm run build && tsc -p test && mocha",
     "watch": "tsc -p . --watch",
     "format": "prettier --write \"**/*.{js,jsx,ts,tsx,css}\"",
     "prepare": "git config --local core.hooksPath .githooks"
@@ -58,19 +58,18 @@
   "dependencies": {
     "debug": "^4.4.3",
     "js-yaml": "^5.5.0",
-    "json5": "^2.2.3",
-    "require-from-string": "^2.0.2"
+    "json5": "^2.2.3"
   },
   "devDependencies": {
     "@types/mocha": "^10.0.10",
     "@types/node": "^25.3.2",
-    "@types/require-from-string": "^1.2.3",
     "lint-staged": "^16.2.7",
     "mocha": "^11.7.5",
     "prettier": "^3.8.1",
-    "ts-node": "^10.9.2",
-    "ts-node-test-register": "^10.0.0",
     "typescript": "^5.9.3"
+  },
+  "engines": {
+    "node": ">=22.18.0"
   },
   "packageManager": "yarn@1.22.22+sha1.ac34549e6aa8e7ead463a7407e1c7390f61a6610"
 }

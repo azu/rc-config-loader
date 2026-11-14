@@ -33,7 +33,7 @@ Because of that, specifying `rc.json` in a subdirectory could load `../rc.json` 
 
 Scenario: When a file with an extension is specified, the configuration read as that format is returned
 
-- Given: The starting directory has one of `rc.json`, `rc.yaml`, `rc.yml`, `rc.js`, and `rc.cjs`.
+- Given: The starting directory has one of `rc.json`, `rc.yaml`, `rc.yml`, `rc.js`, `rc.cjs`, `rc.mjs`, `rc.ts`, `rc.cts`, and `rc.mts`.
 - When: The tool calls `loadConfigFile(<file name>, { cwd: start })`.
 - Then: The configuration read as the format of the extension, and the absolute path of the file, are returned.
 
@@ -166,7 +166,7 @@ None. Only the local file system is read.
 
 ## Security considerations
 
-When the content of the specified file is read as JavaScript, its code is run.
+When the content of the specified file is read as JavaScript or TypeScript, its code is run.
 A name without an extension is also run as JavaScript when it cannot be read as JSON or YAML.
 
 ## Open questions

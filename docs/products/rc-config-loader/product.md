@@ -5,9 +5,9 @@
 ## Overview
 
 rc-config-loader is a Node.js library that finds and loads `.<name>rc` configuration files such as `.textlintrc` and `.eslintrc`.
-It reads JSON, YAML, and JavaScript configuration files and a field of `package.json`, and returns the configuration object with the absolute path of the file.
+It reads JSON, YAML, JavaScript, and TypeScript configuration files and a field of `package.json`, and returns the configuration object with the absolute path of the file.
 Its API consists of synchronous functions, so a caller can load a configuration without becoming asynchronous.
-It is distributed as an npm package and includes TypeScript type definitions.
+It is distributed as an npm package and includes TypeScript type definitions. It runs on Node.js 22.18.0 or later.
 
 ## Background and problems
 
@@ -43,7 +43,7 @@ When each tool implements finding the file and loading each format, every tool c
 ### Several formats under one name
 
 - **Recipient:** CLI tool authors
-- **Offering:** Given only the tool's name, it finds and loads `.<name>rc` JSON, YAML, and JavaScript configuration files and the field of `package.json`.
+- **Offering:** Given only the tool's name, it finds and loads `.<name>rc` JSON, YAML, JavaScript, and TypeScript configuration files and the field of `package.json`.
 - **Reason:** Users write the configuration in the format that fits their project, and authors do not need code for each format.
 
 ### Errors that show which file could not be read
@@ -67,7 +67,7 @@ When each tool implements finding the file and loading each format, every tool c
 | --- | --- | --- |
 | Configuration search | Find `.<name>rc` from the starting directory up through the parents by the tool's name, and load it (`rcFile`) | [Requirements](features/config-search/requirements.md) |
 | Specified configuration file loading | Load only the one file given by a path, without searching (`loadConfigFile`) | [Requirements](features/config-file-loading/requirements.md) |
-| Configuration file formats | Read JSON, YAML, and JavaScript configuration files according to the extension | [Requirements](features/config-formats/requirements.md) |
+| Configuration file formats | Read JSON, YAML, JavaScript, and TypeScript configuration files according to the extension | [Requirements](features/config-formats/requirements.md) |
 
 ## Definition of success
 

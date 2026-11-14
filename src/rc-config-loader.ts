@@ -3,7 +3,6 @@
 // Original https://github.com/zkochan/rcfile
 import path from "path";
 import fs from "fs";
-import requireFromString from "require-from-string";
 import JSON5 from "json5";
 import type {
     PossibleUndefined,
@@ -21,9 +20,13 @@ const debug = require("debug")("rc-config-loader");
 const defaultLoaderByExt: ExtensionLoaderMap = {
     ".cjs": loadJSConfigFile,
     ".js": loadJSConfigFile,
+    ".mjs": loadJSConfigFile,
     ".json": loadJSONConfigFile,
     ".yaml": loadYAMLConfigFile,
-    ".yml": loadYAMLConfigFile
+    ".yml": loadYAMLConfigFile,
+    ".ts": loadJSConfigFile,
+    ".cts": loadJSConfigFile,
+    ".mts": loadJSConfigFile
 };
 
 const defaultOptions: Required<Pick<rcConfigLoaderOption, RequiredOption>> &
@@ -34,7 +37,7 @@ const defaultOptions: Required<Pick<rcConfigLoaderOption, RequiredOption>> &
 };
 
 const selectLoader = (defaultLoaderByExt: ExtensionLoaderMap, extension: ExtensionName): Loader => {
-    if (!defaultOptions.defaultExtension.includes(extension)) {
+    if (!Object.prototype.hasOwnProperty.call(defaultLoaderByExt, extension)) {
         throw new Error(`${extension} is not supported.`);
     }
     return defaultLoaderByExt[extension];
@@ -82,7 +85,7 @@ export function rcFile<R extends {}>(
  * - `filePath` is resolved from `opts.cwd`(default: `process.cwd()`)
  * - It does not search parent directories, does not append any extension, and does not read `package.json`
  * - The loader is selected by the extension of `filePath`
- *   - `.json` → JSON, `.yaml`/`.yml` → YAML, `.js`/`.cjs` → JavaScript
+ *   - `.json` → JSON, `.yaml`/`.yml` → YAML, `.js`/`.cjs`/`.mjs` → JavaScript, `.ts`/`.cts`/`.mts` → TypeScript
  *   - Other names like `.secretlintrc` are tried as JSON, YAML, then JavaScript
  * - If the file does not exist, throw an Error that has `code: "ENOENT"`
  * - If the file can not be parsed, throw an Error
@@ -214,11 +217,19 @@ function join(parts: string[], filename: string) {
     return path.resolve(parts.join(path.sep) + path.sep, filename);
 }
 
+/**
+ * Load JavaScript or TypeScript config file by Node.js's `require()`.
+ * - CommonJS and ES Modules are supported. ES Modules are loaded by `require(esm)`.
+ * - TypeScript is supported by Node.js's built-in type stripping.
+ */
 function loadJSConfigFile(filePath: string, suppress: boolean) {
     debug(`Loading JavaScript config file: ${filePath}`);
     try {
-        const content = fs.readFileSync(filePath, "utf-8");
-        return requireFromString(content, filePath);
+        const resolvedPath = require.resolve(filePath);
+        // Remove the cache of CommonJS module to load the latest content.
+        // Note: Node.js does not provide a way to remove the cache of ES Modules.
+        delete require.cache[resolvedPath];
+        return interopDefault(require(resolvedPath));
     } catch (error: any) {
         debug(`Error reading JavaScript file: ${filePath}`);
         if (!suppress) {
@@ -226,6 +237,17 @@ function loadJSConfigFile(filePath: string, suppress: boolean) {
             throw error;
         }
     }
+}
+
+/**
+ * `require(esm)` returns the module namespace object like `{ __esModule: true, default: config }`.
+ * Return the default export as config.
+ */
+function interopDefault(exported: any) {
+    if (exported && exported.__esModule && "default" in exported) {
+        return exported.default;
+    }
+    return exported;
 }
 
 function loadJSONConfigFile(filePath: string, suppress: boolean) {

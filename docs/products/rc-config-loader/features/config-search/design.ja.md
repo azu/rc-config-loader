@@ -32,7 +32,7 @@
 ### 2. 拡張子のない候補のローダーを決める
 
 `defaultExtension`の各拡張子を`selectLoader`でローダーに変えます。
-`selectLoader`は、既定の`defaultExtension`に含まれない拡張子に`<拡張子> is not supported.`のエラーを投げます。
+`selectLoader`は、共通の表`defaultLoaderByExt`にない拡張子に`<拡張子> is not supported.`のエラーを投げます。
 `defaultExtension`が配列ならローダーの配列（`loadersByOrder`）、1つならローダー1つになります。
 
 探索の表`loaderByExt`は、拡張子からローダーを引く共通の表`defaultLoaderByExt`に、空文字列の拡張子として`loadersByOrder`を加えたものです。
@@ -41,7 +41,7 @@
 
 `cwd`を`path.resolve`で絶対パスにし、区切り文字で分けた配列`parts`にします。
 `findConfig`は`loaderByExt`のキーの順に、`parts`のディレクトリへ`configFileName + 拡張子`を`path.resolve`で結合した場所を確かめます。
-キーの順は表を作った順で、`.cjs`、`.js`、`.json`、`.yaml`、`.yml`、空文字列です。
+キーの順は表を作った順で、`.cjs`、`.js`、`.mjs`、`.json`、`.yaml`、`.yml`、`.ts`、`.cts`、`.mts`、空文字列です。
 `path.resolve`で結合するため、`configFileName`が絶対パスならディレクトリは無視されます。
 
 ファイルが`fs.existsSync`で見つかったら、次のように読みます。

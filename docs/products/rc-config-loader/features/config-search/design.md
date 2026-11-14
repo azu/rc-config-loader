@@ -32,7 +32,7 @@ When `packageJSON` is an object, its `fieldName` is the field name. Otherwise, `
 ### 2. Decide the loaders for the candidate without an extension
 
 Each extension of `defaultExtension` is turned into a loader with `selectLoader`.
-`selectLoader` throws `<extension> is not supported.` for an extension that is not in the default `defaultExtension`.
+`selectLoader` throws `<extension> is not supported.` for an extension that is not in the shared table `defaultLoaderByExt`.
 When `defaultExtension` is an array, the result is an array of loaders (`loadersByOrder`). When it is one extension, the result is one loader.
 
 The search table `loaderByExt` is the shared table from extensions to loaders, `defaultLoaderByExt`, with `loadersByOrder` added as the empty-string extension.
@@ -41,7 +41,7 @@ The search table `loaderByExt` is the shared table from extensions to loaders, `
 
 `cwd` is made absolute with `path.resolve` and split by the separator into the array `parts`.
 `findConfig` checks, in the order of the keys of `loaderByExt`, the location made by joining the directory of `parts` and `configFileName + extension` with `path.resolve`.
-The order of the keys is the order in which the table was built: `.cjs`, `.js`, `.json`, `.yaml`, `.yml`, and the empty string.
+The order of the keys is the order in which the table was built: `.cjs`, `.js`, `.mjs`, `.json`, `.yaml`, `.yml`, `.ts`, `.cts`, `.mts`, and the empty string.
 Because the join uses `path.resolve`, the directory is ignored when `configFileName` is an absolute path.
 
 When a file is found with `fs.existsSync`, it is read as follows.

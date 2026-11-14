@@ -4,7 +4,7 @@
 
 ## このドキュメントについて
 
-rc-config-loaderは、JSON、YAML、JavaScriptで書かれた設定ファイルを読み、設定オブジェクトとして返します。
+rc-config-loaderは、JSON、YAML、JavaScript、TypeScriptで書かれた設定ファイルを読み、設定オブジェクトとして返します。
 この文書は、ファイルの名前からどの形式として読むかと、形式ごとの読み方を説明します。
 [設定ファイルの探索](../config-search/requirements.ja.md)と[指定した設定ファイルの読み込み](../config-file-loading/requirements.ja.md)は、どちらもこの読み方を使います。
 親Productは[rc-config-loader](../../product.ja.md)です。
@@ -12,20 +12,22 @@ rc-config-loaderは、JSON、YAML、JavaScriptで書かれた設定ファイル�
 ### スコープ
 
 - 拡張子と形式の対応
-- JSON、YAML、JavaScriptそれぞれの読み方
+- JSON、YAML、JavaScript、TypeScriptそれぞれの読み方
+- 動作に必要なNode.jsのバージョン
 - 読めなかったときのエラー
 
 ### スコープ外
 
 - どのファイルを読むかの決め方。拡張子のないファイルをどの形式の順に試すかも含めて、[設定ファイルの探索](../config-search/requirements.ja.md)と[指定した設定ファイルの読み込み](../config-file-loading/requirements.ja.md)で扱います。
 - 設定の中身の検証。設定オブジェクトの意味は、rc-config-loaderを使うプログラムが決めます。
-- ECMAScript Modulesの構文（`export default`など）で書いたJavaScriptと、TypeScriptで書いた設定ファイル。どちらも今は読めません（[#22](https://github.com/azu/rc-config-loader/issues/22)）。
+- 非同期の設定ファイル。トップレベルの`await`を使うECMAScript Modulesは読めません。APIを同期のまま保つためです。
+- `tsconfig.json`による型の除去の設定と、型の検査。
 
 ## ユーザーストーリー
 
 ### 好きな形式で設定を書く
 
-ツールの利用者として、JSON、YAML、JavaScriptのうち好きな形式で設定ファイルを書きたい。それによって、プロジェクトに合った書き方で設定できる。
+ツールの利用者として、JSON、YAML、JavaScript、TypeScriptのうち好きな形式で設定ファイルを書きたい。それによって、プロジェクトに合った書き方で設定できる。
 
 **受け入れ条件:**
 
@@ -59,6 +61,18 @@ Scenario: JavaScriptファイルの場合、`module.exports`の値が返る
 - When: プログラムがこのファイルを読む。
 - Then: 設定として`{ foo: 1 }`が返る。
 
+Scenario: ECMAScript Modulesの場合、`export default`の値が返る
+
+- Given: `.foorc.mjs`に`export default { foo: 1 }`が書かれている。
+- When: プログラムがこのファイルを読む。
+- Then: 設定として`{ foo: 1 }`が返る。`default`を持つモジュールの名前空間オブジェクトは返らない。
+
+Scenario: TypeScriptファイルの場合、型を除いて実行した値が返る
+
+- Given: `.foorc.ts`に、型注釈を付けた`const config: Config = { foo: 1 }`と`export default config`が書かれている。
+- When: Node.js 22.18.0以降で、プログラムがこのファイルを読む。
+- Then: 設定として`{ foo: 1 }`が返る。
+
 ### 壊れた設定ファイルに気づく
 
 ツールの利用者として、設定ファイルが壊れているときに、どのファイルが読めなかったかを知りたい。それによって、直すべきファイルが分かる。
@@ -76,6 +90,18 @@ Scenario: YAMLファイルに複数のドキュメントがある場合、エラ
 - Given: `.foorc.yml`が`---`で区切った2つのドキュメントを含む。
 - When: プログラムがこのファイルを読む。
 - Then: 1つのドキュメントを期待していることを示すエラーが投げられる。
+
+Scenario: ECMAScript Modulesがトップレベルの`await`を使う場合、エラーになる
+
+- Given: `.foorc.mjs`がトップレベルの`await`を含む。
+- When: プログラムがこのファイルを読む。
+- Then: `Cannot read config file: <ファイルの絶対パス>`で始まるエラーが投げられる。
+
+Scenario: TypeScriptファイルが型の除去だけで実行できない構文を使う場合、エラーになる
+
+- Given: `.foorc.ts`が`enum`を含む。
+- When: プログラムがこのファイルを読む。
+- Then: `Cannot read config file: <ファイルの絶対パス>`で始まるエラーが投げられる。
 
 ## KPI
 
@@ -99,7 +125,8 @@ Scenario: YAMLファイルに複数のドキュメントがある場合、エラ
 | --- | --- |
 | `.json` | JSON |
 | `.yaml`、`.yml` | YAML |
-| `.js`、`.cjs` | JavaScript（CommonJS） |
+| `.js`、`.cjs`、`.mjs` | JavaScript（CommonJSまたはECMAScript Modules） |
+| `.ts`、`.cts`、`.mts` | TypeScript |
 
 ここにない拡張子に、形式を対応付けることはできません。
 
@@ -115,9 +142,23 @@ YAML 1.2として読み、`<<`のマージキーと日時（timestamp）も扱�
 
 ##### JavaScript
 
-CommonJSのモジュールとして実行し、`module.exports`の値を設定とします。
-ファイルの場所を基準に、ファイルの中の`require`を解決します。
-ファイルは読み込みのたびに実行し、Node.jsのモジュールのキャッシュには残しません。
+Node.jsのモジュールとして実行します。CommonJSかECMAScript Modulesかは、Node.jsが拡張子と`package.json`の`type`で決めます。
+CommonJSでは`module.exports`の値を、ECMAScript Modulesでは`export default`の値を設定とします。
+ファイルの中の`require`と`import`は、ファイルの場所を基準に解決します。
+ECMAScript Modulesは同期的に読める必要があり、トップレベルの`await`は使えません。
+
+CommonJSのファイルは、読み込みのたびに実行し直します。
+ECMAScript Modulesのファイルは、同じプロセスの中では最初に読んだ内容が使われ、ファイルを変えても読み直しません。
+
+##### TypeScript
+
+Node.jsの型の除去（type stripping）で型を取り除き、JavaScriptと同じ規則で実行します。
+型の除去だけで実行できる構文に限ります。`enum`や、実行時のコードを持つ`namespace`は使えません。
+`tsconfig.json`は読まず、型の検査もしません。
+
+##### Node.jsのバージョン
+
+Node.js 22.18.0以降で動きます。型の除去が既定で有効になった最初の22系のバージョンです。
 
 #### 例外ケースでの振る舞い
 
@@ -148,8 +189,8 @@ CommonJSのモジュールとして実行し、`module.exports`の値を設定�
 
 ## セキュリティ上の留意事項
 
-JavaScriptの設定ファイルは、読み込んだプログラムと同じ権限で実行されます。
-JavaScriptの設定ファイルを読むことは、そのファイルのコードを実行することと同じです。
+JavaScriptとTypeScriptの設定ファイルは、読み込んだプログラムと同じ権限で実行されます。
+これらの設定ファイルを読むことは、そのファイルのコードを実行することと同じです。
 
 ## 未決事項
 

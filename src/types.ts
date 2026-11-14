@@ -1,4 +1,4 @@
-export type ExtensionName = ".cjs" | ".js" | ".json" | ".yaml" | ".yml";
+export type ExtensionName = ".cjs" | ".js" | ".mjs" | ".json" | ".yaml" | ".yml" | ".ts" | ".cts" | ".mts";
 
 export type RequiredOption = "packageJSON" | "defaultExtension" | "cwd";
 

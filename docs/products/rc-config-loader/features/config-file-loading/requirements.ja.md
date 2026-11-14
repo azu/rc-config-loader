@@ -33,7 +33,7 @@ CLIツールの作者として、利用者がオプションで指定した設�
 
 Scenario: 拡張子の付いたファイルを指定した場合、その形式で読んだ設定が返る
 
-- Given: 起点に`rc.json`、`rc.yaml`、`rc.yml`、`rc.js`、`rc.cjs`のいずれかがある。
+- Given: 起点に`rc.json`、`rc.yaml`、`rc.yml`、`rc.js`、`rc.cjs`、`rc.mjs`、`rc.ts`、`rc.cts`、`rc.mts`のいずれかがある。
 - When: ツールが`loadConfigFile(<ファイル名>, { cwd: 起点 })`を呼ぶ。
 - Then: 拡張子の形式で読んだ設定と、ファイルの絶対パスが返る。
 
@@ -166,7 +166,7 @@ JavaScriptとして読んだときのエラーを投げます。メッセージ�
 
 ## セキュリティ上の留意事項
 
-指定されたファイルの中身がJavaScriptとして読まれると、そのコードを実行します。
+指定されたファイルの中身がJavaScriptかTypeScriptとして読まれると、そのコードを実行します。
 拡張子のない名前も、JSONとYAMLで読めなければJavaScriptとして実行します。
 
 ## 未決事項

@@ -1,12 +1,12 @@
 {
     "extends": "../tsconfig.json",
     "compilerOptions": {
-        "allowJs": true,
-        "declaration": false,
+        "module": "nodenext",
+        "moduleResolution": "nodenext",
+        "target": "es2022",
         "noEmit": true
     },
     "include": [
-        "../src/**/*",
-        "./**/*"
+        "./*.mts"
     ]
 }
