@@ -299,12 +299,27 @@ function loadJSConfigFile(filePath: string, suppress: boolean) {
         // Remove the cache of CommonJS module to load the latest content.
         // Note: Node.js does not provide a way to remove the cache of ES Modules.
         delete require.cache[resolvedPath];
-        return interopDefault(require(resolvedPath));
+        try {
+            return interopDefault(require(resolvedPath));
+        } finally {
+            // `require()` adds the loaded module to `module.children`.
+            // Remove it so that loading a config file many times does not keep old modules in memory.
+            removeChildModule(resolvedPath);
+        }
     } catch (error: any) {
         debug(`Error reading JavaScript file: ${filePath}`);
         if (!suppress) {
             error.message = `Cannot read config file: ${filePath}\nError: ${error.message}`;
             throw error;
+        }
+    }
+}
+
+function removeChildModule(resolvedPath: string) {
+    const children = module.children;
+    for (let i = children.length - 1; i >= 0; i--) {
+        if (children[i].id === resolvedPath || children[i].filename === resolvedPath) {
+            children.splice(i, 1);
         }
     }
 }
