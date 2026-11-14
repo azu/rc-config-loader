@@ -104,6 +104,12 @@ describe("rc-config-loader", () => {
         });
     });
 
+    it("should throw error if yaml config has multiple documents", () => {
+        assert.throws(() => {
+            rcFile("multiyaml", { cwd: path.join(__dirname, "fixtures") });
+        }, /expected a single document/);
+    });
+
     it("should read from package.json if no separate config file found", () => {
         const results = rcFile("qar", {
             cwd: path.join(__dirname, "fixtures"),

@@ -208,12 +208,17 @@ function loadYAMLConfigFile(filePath: string, suppress: boolean) {
         const content = readFile(filePath);
         // js-yaml v5's load() throws on empty input(empty, whitespace-only or comment-only file),
         // but loadAll() returns an empty array for it. Treat it as an empty config.
+        // Use loadAll() to parse the content only once.
         const documents = loadAll(content, { schema });
         if (documents.length === 0) {
             return {};
         }
+        if (documents.length > 1) {
+            // throw the same error as load() for multiple documents
+            return load(content, { schema });
+        }
         // empty document like "---" is null, so always use object
-        return load(content, { schema }) || {};
+        return documents[0] || {};
     } catch (error: any) {
         debug(`Error reading YAML file: ${filePath}`);
         if (!suppress) {
