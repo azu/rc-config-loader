@@ -51,7 +51,7 @@ console.log(rcFile("travis", { configFileName: ".travis" }));
 console.log(
     rcFile("bar", {
         configFileName: `${__dirname}/test/fixtures/.barrc`,
-        defaultExtension: [".json", ".yml", ".js"]
+        extensions: [".json", ".yml", ".js"]
     })
 );
 
@@ -60,7 +60,7 @@ console.log(
 try {
     rcFile("unknown", {
         configFileName: `${__dirname}/test/fixtures/.unknownrc`,
-        defaultExtension: ".json"
+        extensions: [".json"]
     });
 } catch (error) {
     console.log(error);

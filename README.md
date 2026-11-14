@@ -60,11 +60,11 @@ export interface rcConfigLoaderOption {
           };
     // if config file name is not same with packageName, set the name
     configFileName?: string;
-    // treat default(no ext file) as some extension
-    defaultExtension?: string | string[];
     // where start to load
     cwd?: string;
-    // extensions to search, in order of priority. Default: all supported extensions
+    // extensions to search, in order of priority
+    // A file without extension like `.<product>rc` is tried as the formats of `.json`, `.yaml`/`.yml`, and `.js` in this list
+    // Default: [".json", ".yaml", ".yml", ".js", ".cjs", ".mjs", ".ts", ".cts", ".mts"]
     extensions?: string[];
 }
 /**
@@ -117,12 +117,15 @@ console.log(config); // => rcfile content
 It will check these files and return config file if found it.
 
 - `.your-applicationrc.json`
-- `.your-applicationrc.yml`
 - `.your-applicationrc.yaml`
+- `.your-applicationrc.yml`
 - `.your-applicationrc.js`
+- `.your-applicationrc.cjs`
 - `.your-applicationrc.mjs`
 - `.your-applicationrc.ts`
-- and other supported extensions
+- `.your-applicationrc.cts`
+- `.your-applicationrc.mts`
+- `.your-applicationrc` (tried as JSON, YAML, then JavaScript)
 - [optional] `package.json`
   - if `packageJSON` option is enabled
 
@@ -224,9 +227,10 @@ loadConfigFile("config.js", {
 });
 ```
 
-- `rcFile`: if `defaultExtension` is not specified, a file without extension like `.your-applicationrc` is tried only as the formats in `extensions`
-- `loadConfigFile`: a file without known extension is tried only as JSON(`.json`), YAML(`.yaml` or `.yml`), and JavaScript(`.js`) that are in `extensions`
+- A file without extension like `.your-applicationrc` is tried only as JSON(`.json`), YAML(`.yaml` or `.yml`), and JavaScript(`.js`) that are in `extensions`, in order of `extensions`
+- `rcFile` does not try a file without extension if `extensions` has none of `.json`, `.yaml`, `.yml`, and `.js`. `loadConfigFile` throws the `ERR_RC_CONFIG_EXTENSION_NOT_ALLOWED` error in that case
 - An empty array or an unsupported extension throws an Error
+- `defaultExtension` option was removed. Use `extensions` instead. Passing `defaultExtension` throws an Error
 
 ### Example
 
@@ -273,7 +277,7 @@ filePath: /path/to/.travis
 // try to load as .json, .yml, js
 console.log(rcFile("bar", {
     configFileName: `${__dirname}/test/fixtures/.barrc`,
-    defaultExtension: [".json", ".yml", ".js"]
+    extensions: [".json", ".yml", ".js"]
 }));
 
 // try to load as foobar, but .foobarrc is not found
@@ -285,7 +289,7 @@ try {
     rcFile("unknown", {
         // This is not json
         configFileName: `${__dirname}/test/fixtures/.unknownrc`,
-        defaultExtension: ".json"
+        extensions: [".json"]
     })
 } catch (error) {
     console.log(error);
@@ -336,4 +340,4 @@ MIT © azu
 
 **Difference**
 
-- support multiple `defaultExtension`  
+- support multiple formats for a file without extension  

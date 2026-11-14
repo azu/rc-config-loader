@@ -174,10 +174,10 @@ describe("rc-config-loader", () => {
         assert(filePath === path.join(cwd, ".eslintrc"));
     });
 
-    it("should search multiple file type if set multiple extensions to defaultExtension", () => {
+    it("should try a file without extension as the formats in extensions", () => {
         const results = rcFile<{ unknown: string }>("unknown", {
             cwd: path.join(import.meta.dirname, "fixtures"),
-            defaultExtension: [".json", ".yml", ".js"]
+            extensions: [".json", ".yml", ".js"]
         });
         if (!results) {
             throw new Error("not found");
@@ -191,7 +191,7 @@ describe("rc-config-loader", () => {
     it("should throw error if config file has invalid content", () => {
         assert.throws(() => {
             rcFile("invalid-config", {
-                defaultExtension: ".js",
+                extensions: [".js"],
                 cwd: path.join(import.meta.dirname, "fixtures")
             });
         }, Error);
@@ -199,7 +199,7 @@ describe("rc-config-loader", () => {
     it("should throw error if config file has invalid content", () => {
         assert.throws(() => {
             rcFile("invalid-config", {
-                defaultExtension: ".js",
+                extensions: [".js"],
                 cwd: path.join(import.meta.dirname, "fixtures")
             });
         }, Error);
@@ -225,16 +225,27 @@ describe("rc-config-loader", () => {
         it("should not find a config file of an extension that is not specified", () => {
             assert.strictEqual(rcFile("onlyjs", { cwd, extensions: [".json", ".yaml", ".yml"] }), undefined);
         });
-        it("should limit the default defaultExtension to the specified extensions", () => {
-            // .noextrc is JavaScript, and it is not tried as JavaScript
-            assert.strictEqual(rcFile("noext", { cwd, extensions: [".json"] }), undefined);
+        it("should prefer JSON to JavaScript by default", () => {
+            const results = rcFile("priority", { cwd });
+            assert.strictEqual(results?.filePath, path.join(cwd, ".priorityrc.json"));
+        });
+        it("should try a file without extension only as the formats in extensions", () => {
+            // .noextrc is JavaScript. Only JSON is tried, so the error of JSON is thrown and it is not run
+            const filePath = path.join(cwd, ".noextrc");
+            assert.throws(() => rcFile("noext", { cwd, extensions: [".json"] }), {
+                message: new RegExp(`^Cannot read config file: ${filePath.replace(/[.*+?^${}()|[\]\\]/g, "\\$&")}`)
+            });
             assert.deepStrictEqual(rcFile("noext", { cwd, extensions: [".json", ".js"] })?.config, {
                 type: "no-ext-js"
             });
         });
-        it("should throw an error if defaultExtension includes an extension that is not specified", () => {
-            assert.throws(() => rcFile("noext", { cwd, extensions: [".json"], defaultExtension: [".js"] }), {
-                message: ".js in defaultExtension is not included in extensions."
+        it("should not try a file without extension if no format for it is in extensions", () => {
+            // .ts does not add a format for a file without extension
+            assert.strictEqual(rcFile("noext", { cwd, extensions: [".ts"] }), undefined);
+        });
+        it("should throw an error if defaultExtension is specified", () => {
+            assert.throws(() => rcFile("noext", { cwd, defaultExtension: [".js"] } as any), {
+                message: "defaultExtension option is removed. Use extensions option instead."
             });
         });
         it("should throw an error if extensions is empty", () => {

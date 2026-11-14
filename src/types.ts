@@ -1,6 +1,6 @@
 export type ExtensionName = ".cjs" | ".js" | ".mjs" | ".json" | ".yaml" | ".yml" | ".ts" | ".cts" | ".mts";
 
-export type RequiredOption = "packageJSON" | "defaultExtension" | "cwd";
+export type RequiredOption = "packageJSON" | "cwd";
 
 export type Loader = <R extends {}>(fileName: string, supperes: boolean) => R;
 
@@ -24,16 +24,13 @@ export interface rcConfigLoaderOption {
     /** if config file name is not same with packageName, set the name */
     configFileName?: string;
 
-    /** treat default(no ext file) as some extension */
-    defaultExtension?: ExtensionName | ExtensionName[];
-
     /** where start to load */
     cwd?: string;
 
     /**
      * extensions of config files to search, in order of priority.
-     * Default: all supported extensions.
-     * If it is specified, the default `defaultExtension` is limited to these extensions.
+     * A file without extension like `.<product>rc` is tried as the formats of `.json`, `.yaml`/`.yml`, and `.js` in this list.
+     * Default: [".json", ".yaml", ".yml", ".js", ".cjs", ".mjs", ".ts", ".cts", ".mts"]
      */
     extensions?: ExtensionName[];
 }
@@ -44,8 +41,8 @@ export interface loadConfigFileOption {
 
     /**
      * extensions of config files to load.
-     * Default: all supported extensions.
-     * A file without a known extension is tried only as the formats of the allowed `.json`, `.yaml`/`.yml`, and `.js`.
+     * A file without a known extension is tried as the formats of `.json`, `.yaml`/`.yml`, and `.js` in this list, in this order.
+     * Default: [".json", ".yaml", ".yml", ".js", ".cjs", ".mjs", ".ts", ".cts", ".mts"]
      */
     extensions?: ExtensionName[];
 }

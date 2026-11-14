@@ -29,20 +29,16 @@ const defaultLoaderByExt: ExtensionLoaderMap = {
     ".mts": loadJSConfigFile
 };
 
-const defaultDefaultExtension: ExtensionName[] = [".json", ".yaml", ".yml", ".js", ".cjs"];
+/**
+ * The default extensions and their priority.
+ * A file without extension like `.<product>rc` is tried as JSON, YAML, then JavaScript.
+ */
+const defaultExtensions: ExtensionName[] = [".json", ".yaml", ".yml", ".js", ".cjs", ".mjs", ".ts", ".cts", ".mts"];
 
 const defaultOptions: Required<Pick<rcConfigLoaderOption, RequiredOption>> &
     Omit<rcConfigLoaderOption, RequiredOption> = {
     packageJSON: false,
-    defaultExtension: defaultDefaultExtension,
     cwd: process.cwd()
-};
-
-const selectLoader = (defaultLoaderByExt: ExtensionLoaderMap, extension: ExtensionName): Loader => {
-    if (!Object.prototype.hasOwnProperty.call(defaultLoaderByExt, extension)) {
-        throw new Error(`${extension} is not supported.`);
-    }
-    return defaultLoaderByExt[extension];
 };
 
 const isSupportedExtension = (extension: string): extension is ExtensionName => {
@@ -50,12 +46,12 @@ const isSupportedExtension = (extension: string): extension is ExtensionName => 
 };
 
 /**
- * Return the extensions that are allowed to load.
- * If `extensions` is not specified, all supported extensions are allowed.
+ * Return the extensions that are allowed to load, in order of priority.
+ * If `extensions` is not specified, return the default extensions.
  */
 const resolveAllowedExtensions = (extensions?: ExtensionName[]): ExtensionName[] => {
     if (extensions === undefined) {
-        return Object.keys(defaultLoaderByExt) as ExtensionName[];
+        return defaultExtensions;
     }
     if (!Array.isArray(extensions) || extensions.length === 0) {
         throw new Error("extensions should be a non-empty array.");
@@ -69,6 +65,30 @@ const resolveAllowedExtensions = (extensions?: ExtensionName[]): ExtensionName[]
 };
 
 /**
+ * Return the loaders for a file without known extension, in order of `extensions`.
+ * - `.json` → JSON, `.yaml` or `.yml` → YAML, `.js` → JavaScript
+ * - Other extensions like `.ts` do not add a loader, because a file without extension can not be TypeScript.
+ * - The same loader is not added twice, so a JavaScript file is not run twice.
+ */
+const selectLoadersForNoExtension = (extensions: ExtensionName[]): Loader[] => {
+    const loaders: Loader[] = [];
+    extensions.forEach((extension) => {
+        const loader =
+            extension === ".json"
+                ? loadJSONConfigFile
+                : extension === ".yaml" || extension === ".yml"
+                  ? loadYAMLConfigFile
+                  : extension === ".js"
+                    ? loadJSConfigFile
+                    : undefined;
+        if (loader && !loaders.includes(loader)) {
+            loaders.push(loader);
+        }
+    });
+    return loaders;
+};
+
+/**
  * Find and load rcfile, return { config, filePath }
  * If not found any rcfile, throw an Error.
  * @param {string} pkgName
@@ -79,34 +99,29 @@ export function rcFile<R extends {}>(
     pkgName: string,
     opts: rcConfigLoaderOption = {}
 ): PossibleUndefined<rcConfigResult<R>> {
+    if (Object.prototype.hasOwnProperty.call(opts, "defaultExtension")) {
+        throw new Error("defaultExtension option is removed. Use extensions option instead.");
+    }
     // path/to/config or basename of config file.
     const configFileName = opts.configFileName || `.${pkgName}rc`;
     const allowedExtensions = resolveAllowedExtensions(opts.extensions);
-    // If `extensions` is specified, the default `defaultExtension` is limited to the allowed extensions.
-    const defaultExtension =
-        opts.defaultExtension || defaultDefaultExtension.filter((extension) => allowedExtensions.includes(extension));
     const cwd = opts.cwd || defaultOptions.cwd;
     const packageJSON = opts.packageJSON || defaultOptions.packageJSON;
     const packageJSONFieldName = typeof packageJSON === "object" ? packageJSON.fieldName : pkgName;
 
     const parts = splitPath(cwd);
-    const selectAllowedLoader = (extension: ExtensionName): Loader => {
-        const loader = selectLoader(defaultLoaderByExt, extension);
-        if (!allowedExtensions.includes(extension)) {
-            throw new Error(`${extension} in defaultExtension is not included in extensions.`);
-        }
-        return loader;
-    };
-    const loadersByOrder = Array.isArray(defaultExtension)
-        ? defaultExtension.map((extension) => selectAllowedLoader(extension))
-        : selectAllowedLoader(defaultExtension);
+    // A file without extension: if only one format is allowed, its error is thrown.
+    // If multiple formats are allowed, errors are suppressed and the file is skipped when all fail.
+    const noExtensionLoaders = selectLoadersForNoExtension(allowedExtensions);
+    const loadersByOrder: Loader | Loader[] =
+        noExtensionLoaders.length === 1 ? noExtensionLoaders[0] : noExtensionLoaders;
 
     // Search the extensions in the order of `extensions`, then the name without extension.
     const loaderByExt: { [index: string]: Loader | Loader[] } = {};
     allowedExtensions.forEach((extension) => {
         loaderByExt[extension] = defaultLoaderByExt[extension];
     });
-    if (!Array.isArray(loadersByOrder) || loadersByOrder.length > 0) {
+    if (noExtensionLoaders.length > 0) {
         loaderByExt[""] = loadersByOrder;
     }
     return findConfig<R>({
@@ -125,7 +140,7 @@ export function rcFile<R extends {}>(
  * - It does not search parent directories, does not append any extension, and does not read `package.json`
  * - The loader is selected by the extension of `filePath`
  *   - `.json` → JSON, `.yaml`/`.yml` → YAML, `.js`/`.cjs`/`.mjs` → JavaScript, `.ts`/`.cts`/`.mts` → TypeScript
- *   - Other names like `.secretlintrc` are tried as JSON, YAML, then JavaScript
+ *   - Other names like `.secretlintrc` are tried as JSON, YAML, then JavaScript (in order of `extensions`)
  * - If the file does not exist, throw an Error that has `code: "ENOENT"`
  * - If the file can not be parsed, throw an Error
  * @param {string} filePath
@@ -153,19 +168,10 @@ export function loadConfigFile<R extends {}>(filePath: string, opts: loadConfigF
             filePath: configLocation
         };
     }
-    // Unknown or no extension like `.secretlintrc`: try JSON, YAML, then JavaScript.
-    // Each format is tried only if its extension is allowed: `.json`, `.yaml` or `.yml`, and `.js`.
+    // Unknown or no extension like `.secretlintrc`: try the formats in order of `extensions`.
+    // By default, JSON, YAML, then JavaScript.
     // Errors are suppressed except for the last loader, so the error of the last loader is thrown when all fail.
-    const fallbackLoaders: Loader[] = [];
-    if (allowedExtensions.includes(".json")) {
-        fallbackLoaders.push(loadJSONConfigFile);
-    }
-    if (allowedExtensions.includes(".yaml") || allowedExtensions.includes(".yml")) {
-        fallbackLoaders.push(loadYAMLConfigFile);
-    }
-    if (allowedExtensions.includes(".js")) {
-        fallbackLoaders.push(loadJSConfigFile);
-    }
+    const fallbackLoaders = selectLoadersForNoExtension(allowedExtensions);
     if (fallbackLoaders.length === 0) {
         throw createNotAllowedError(configLocation);
     }
